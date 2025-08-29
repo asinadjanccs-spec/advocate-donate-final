@@ -7,6 +7,17 @@ import Index from "./pages/Index";
 import Organizations from "./pages/Organizations";
 import Campaigns from "./pages/Campaigns";
 import About from "./pages/About";
+import Auth from "./pages/Auth";
+import Donate from "./pages/Donate";
+import HowItWorks from "./pages/HowItWorks";
+import Stories from "./pages/Stories";
+import TaxInfo from "./pages/TaxInfo";
+import Verify from "./pages/Verify";
+import CreateCampaign from "./pages/CreateCampaign";
+import Resources from "./pages/Resources";
+import Support from "./pages/Support";
+import Safety from "./pages/Safety";
+import Guidelines from "./pages/Guidelines";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +33,17 @@ const App = () => (
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/about" element={<About />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/donate" element={<Donate />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/stories" element={<Stories />} />
+          <Route path="/tax-info" element={<TaxInfo />} />
+          <Route path="/verify" element={<Verify />} />
+          <Route path="/create-campaign" element={<CreateCampaign />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/support" element={<Support />} />
+          <Route path="/safety" element={<Safety />} />
+          <Route path="/guidelines" element={<Guidelines />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

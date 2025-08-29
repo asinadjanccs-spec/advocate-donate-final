@@ -7,40 +7,40 @@
 @layer base {
   :root {
     /* Core Brand Colors - Warm, trustworthy, impactful */
-    --background: 0 0% 100%;
-    --foreground: 215 25% 15%;
+    --background: 30 49% 87%;
+    --foreground: 25 52% 20%;
 
-    /* Trust Blue - Primary brand color */
-    --primary: 210 100% 45%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 210 100% 95%;
-    --primary-dark: 210 100% 35%;
+    /* Trust Brown - Primary brand color */
+    --primary: 25 52% 42%;
+    --primary-foreground: 30 49% 87%;
+    --primary-light: 25 52% 85%;
+    --primary-dark: 25 52% 30%;
 
-    /* Impact Orange - Action and urgency */
-    --impact: 25 95% 55%;
-    --impact-foreground: 0 0% 100%;
-    --impact-light: 25 95% 95%;
-    --impact-dark: 25 95% 45%;
+    /* Impact Warm - Action and urgency */
+    --impact: 25 52% 42%;
+    --impact-foreground: 30 49% 87%;
+    --impact-light: 25 52% 90%;
+    --impact-dark: 25 52% 35%;
 
     /* Growth Green - Success and progress */
     --success: 142 76% 40%;
     --success-foreground: 0 0% 100%;
     --success-light: 142 76% 95%;
 
-    /* Warm Gray - Supporting neutrals */
-    --muted: 210 15% 96%;
-    --muted-foreground: 215 15% 45%;
-    --muted-dark: 215 20% 85%;
+    /* Warm Cream - Supporting neutrals */
+    --muted: 30 49% 92%;
+    --muted-foreground: 25 52% 25%;
+    --muted-dark: 30 49% 85%;
 
     /* Card and Surface colors */
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
-    --card-hover: 210 15% 98%;
+    --card: 30 49% 90%;
+    --card-foreground: 25 52% 20%;
+    --card-hover: 30 49% 82%;
 
     /* Interactive elements */
-    --border: 210 15% 90%;
-    --input: 210 15% 96%;
-    --ring: 210 100% 45%;
+    --border: 30 49% 80%;
+    --input: 30 49% 90%;
+    --ring: 25 52% 42%;
 
     /* Semantic colors */
     --destructive: 0 85% 60%;
@@ -50,16 +50,16 @@
     --warning-foreground: 0 0% 100%;
 
     /* Popover colors */
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover: 30 49% 90%;
+    --popover-foreground: 25 52% 20%;
 
     /* Secondary colors */
-    --secondary: 210 15% 96%;
-    --secondary-foreground: 215 25% 15%;
+    --secondary: 30 49% 85%;
+    --secondary-foreground: 25 52% 20%;
 
     /* Accent colors */
-    --accent: 210 15% 96%;
-    --accent-foreground: 215 25% 15%;
+    --accent: 30 49% 88%;
+    --accent-foreground: 25 52% 20%;
 
     /* Gradients for impact */
     --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--impact)) 100%);
@@ -83,43 +83,43 @@
   }
 
   .dark {
-    --background: 215 25% 8%;
-    --foreground: 210 15% 90%;
+    --background: 25 52% 8%;
+    --foreground: 30 49% 90%;
 
-    --card: 215 25% 10%;
-    --card-foreground: 210 15% 90%;
-    --card-hover: 215 25% 12%;
+    --card: 25 52% 10%;
+    --card-foreground: 30 49% 90%;
+    --card-hover: 25 52% 12%;
 
-    --primary: 210 100% 55%;
-    --primary-foreground: 215 25% 8%;
-    --primary-light: 210 100% 15%;
-    --primary-dark: 210 100% 45%;
+    --primary: 25 52% 60%;
+    --primary-foreground: 25 52% 8%;
+    --primary-light: 25 52% 20%;
+    --primary-dark: 25 52% 45%;
 
-    --impact: 25 95% 60%;
-    --impact-foreground: 215 25% 8%;
-    --impact-light: 25 95% 15%;
-    --impact-dark: 25 95% 50%;
+    --impact: 25 52% 65%;
+    --impact-foreground: 25 52% 8%;
+    --impact-light: 25 52% 15%;
+    --impact-dark: 25 52% 50%;
 
     --success: 142 76% 50%;
     --success-foreground: 215 25% 8%;
     --success-light: 142 76% 15%;
 
-    --muted: 215 20% 15%;
-    --muted-foreground: 210 15% 60%;
-    --muted-dark: 215 20% 20%;
+    --muted: 25 52% 15%;
+    --muted-foreground: 30 49% 60%;
+    --muted-dark: 25 52% 20%;
 
-    --border: 215 20% 20%;
-    --input: 215 20% 15%;
-    --ring: 210 100% 55%;
+    --border: 25 52% 20%;
+    --input: 25 52% 15%;
+    --ring: 25 52% 60%;
 
-    --popover: 215 25% 10%;
-    --popover-foreground: 210 15% 90%;
+    --popover: 25 52% 10%;
+    --popover-foreground: 30 49% 90%;
 
-    --secondary: 215 20% 15%;
-    --secondary-foreground: 210 15% 90%;
+    --secondary: 25 52% 15%;
+    --secondary-foreground: 30 49% 90%;
 
-    --accent: 215 20% 15%;
-    --accent-foreground: 210 15% 90%;
+    --accent: 25 52% 15%;
+    --accent-foreground: 30 49% 90%;
 
     --destructive: 0 85% 65%;
     --destructive-foreground: 215 25% 8%;
