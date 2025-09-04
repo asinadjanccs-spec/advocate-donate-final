@@ -60,7 +60,7 @@ const About = () => {
         </div>
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Badge variant="outline" className="mb-6">
-            About Bridge Needs
+            About Advocate&Donate
           </Badge>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
             Bridging the Gap Between
@@ -83,7 +83,7 @@ const About = () => {
                 Our Mission
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
-                Bridge Needs was founded on the belief that every person deserves 
+                Advocate&Donate was founded on the belief that every person deserves 
                 access to basic necessities like food, shelter, education, and healthcare. 
                 We saw that generous hearts existed alongside urgent needs, but the 
                 connection between them wasn't always clear or efficient.
@@ -153,11 +153,11 @@ const About = () => {
       <section className="py-20 bg-muted/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-8">
-            How Bridge Needs Began
+            How Advocate&Donate Began
           </h2>
           <div className="prose prose-lg mx-auto text-muted-foreground">
             <p className="mb-6">
-              Bridge Needs started as a response to the challenges we witnessed 
+              Advocate&Donate started as a response to the challenges we witnessed 
               during natural disasters in the Philippines. We saw incredible 
               generosity from people wanting to help, but also saw how difficult 
               it was to ensure donations reached the right people at the right time.
@@ -168,7 +168,7 @@ const About = () => {
               available resources. We knew technology could solve these problems.
             </p>
             <p className="mb-8">
-              Today, Bridge Needs serves as the digital infrastructure that makes 
+              Today, Advocate&Donate serves as the digital infrastructure that makes 
               giving more transparent, efficient, and impactful for everyone involved.
             </p>
           </div>
@@ -191,7 +191,7 @@ const About = () => {
           </h2>
           <p className="text-xl text-white/90 mb-8">
             Whether you're a donor, organization, or someone in need of support, 
-            Bridge Needs has a place for you in our growing community.
+            Advocate&Donate has a place for you in our growing community.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="xl" className="bg-white text-primary hover:bg-white/90">

@@ -54,7 +54,7 @@ const HowItWorks = () => {
         <section className="py-20 px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
-              How Bridge Needs Works
+              How Advocate&Donate Works
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               Connecting generosity with genuine need through a simple, secure, and transparent platform.
@@ -92,7 +92,7 @@ const HowItWorks = () => {
         <section className="py-16 px-4 bg-muted">
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl font-bold text-center text-foreground mb-12">
-              Why Choose Bridge Needs?
+              Why Choose Advocate&Donate?
             </h2>
             <div className="grid md:grid-cols-3 gap-8">
               {features.map((feature, index) => (

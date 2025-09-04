@@ -78,7 +78,7 @@ const Resources = () => {
               Resources
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Everything you need to succeed on Bridge Needs. Guides, templates, best practices, and expert advice to maximize your impact.
+              Everything you need to succeed on Advocate&Donate. Guides, templates, best practices, and expert advice to maximize your impact.
             </p>
           </div>
         </section>
@@ -182,10 +182,10 @@ const Resources = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-foreground mb-2">
-                    What percentage does Bridge Needs take from donations?
+                    What percentage does Advocate&Donate take from donations?
                   </h3>
                   <p className="text-muted-foreground">
-                    Bridge Needs charges a small platform fee to cover payment processing and platform maintenance. For verified organizations, this is 2.9% + ₱15 per transaction for most payment methods.
+                    Advocate&Donate charges a small platform fee to cover payment processing and platform maintenance. For verified organizations, this is 2.9% + ₱15 per transaction for most payment methods.
                   </p>
                 </CardContent>
               </Card>

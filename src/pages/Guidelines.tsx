@@ -84,7 +84,7 @@ const Guidelines = () => {
               Community Guidelines
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Our guidelines ensure Bridge Needs remains a safe, trustworthy platform where genuine causes can thrive and donors can give with confidence.
+              Our guidelines ensure Advocate&Donate remains a safe, trustworthy platform where genuine causes can thrive and donors can give with confidence.
             </p>
           </div>
         </section>
@@ -122,7 +122,7 @@ const Guidelines = () => {
               <CardHeader>
                 <CardTitle className="text-2xl flex items-center gap-2 text-success">
                   <CheckCircle className="w-6 h-6" />
-                  What's Allowed on Bridge Needs
+                  What's Allowed on Advocate&Donate
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -154,7 +154,7 @@ const Guidelines = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground mb-6">
-                  To maintain trust and safety, the following activities are strictly prohibited on Bridge Needs:
+                  To maintain trust and safety, the following activities are strictly prohibited on Advocate&Donate:
                 </p>
                 <div className="grid gap-3">
                   {prohibitedActivities.map((activity, index) => (

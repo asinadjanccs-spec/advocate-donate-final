@@ -68,11 +68,11 @@ const DonationSuccess: React.FC = () => {
     if (navigator.share) {
       navigator.share({
         title: 'I just made a donation!',
-        text: `I donated ₱${donation.amount.toLocaleString()} to ${donation.recipient} through Bridge Needs. Join me in making a difference!`,
+        text: `I donated ₱${donation.amount.toLocaleString()} to ${donation.recipient} through Advocate&Donate. Join me in making a difference!`,
         url: window.location.origin
       });
     } else {
-      const text = `I donated ₱${donation.amount.toLocaleString()} to ${donation.recipient} through Bridge Needs. Join me in making a difference! ${window.location.origin}`;
+      const text = `I donated ₱${donation.amount.toLocaleString()} to ${donation.recipient} through Advocate&Donate. Join me in making a difference! ${window.location.origin}`;
       navigator.clipboard.writeText(text);
     }
   };

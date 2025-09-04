@@ -36,12 +36,12 @@ const DonationConfirmation: React.FC<DonationConfirmationProps> = ({
     if (navigator.share) {
       navigator.share({
         title: 'I just made a donation!',
-        text: `I donated ₱${result.amount} to ${result.recipient} through Bridge Needs. Join me in making a difference!`,
+        text: `I donated ₱${result.amount} to ${result.recipient} through Advocate&Donate. Join me in making a difference!`,
         url: window.location.origin
       });
     } else {
       // Fallback for browsers that don't support Web Share API
-      const text = `I donated ₱${result.amount} to ${result.recipient} through Bridge Needs. Join me in making a difference! ${window.location.origin}`;
+      const text = `I donated ₱${result.amount} to ${result.recipient} through Advocate&Donate. Join me in making a difference! ${window.location.origin}`;
       navigator.clipboard.writeText(text);
     }
   };

@@ -1,4 +1,4 @@
--- Create donation-related tables for Bridge Needs platform
+-- Create donation-related tables for Advocate&Donate platform
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

@@ -72,7 +72,7 @@ const HowItWorksSection = () => {
             Making Impact Simple & Transparent
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Bridge Needs connects generosity with genuine need through a transparent, 
+            Advocate&Donate connects generosity with genuine need through a transparent, 
             efficient platform that ensures every contribution makes a real difference.
           </p>
         </div>
@@ -128,7 +128,7 @@ const HowItWorksSection = () => {
             Built for Everyone
           </h3>
           <p className="text-center text-muted-foreground mb-12">
-            Whether you're giving, organizing, or in need of support, Bridge Needs has tools for you.
+            Whether you're giving, organizing, or in need of support, Advocate&Donate has tools for you.
           </p>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -163,7 +163,7 @@ const HowItWorksSection = () => {
           </h3>
           <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
             Join thousands of donors, organizations, and recipients who are building 
-            stronger communities through Bridge Needs.
+            stronger communities through Advocate&Donate.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="xl" className="bg-white text-primary hover:bg-white/90">

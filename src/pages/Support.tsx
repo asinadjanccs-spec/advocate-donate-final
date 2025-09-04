@@ -75,7 +75,7 @@ const Support = () => {
               Support Center
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              We're here to help you succeed. Find answers, get assistance, and make the most of Bridge Needs.
+              We're here to help you succeed. Find answers, get assistance, and make the most of Advocate&Donate.
             </p>
           </div>
         </section>

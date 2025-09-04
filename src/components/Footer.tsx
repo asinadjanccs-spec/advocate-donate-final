@@ -33,7 +33,7 @@ const Footer = () => {
     {
       title: "Company",
       links: [
-        { label: "About Bridge Needs", href: "/about" },
+        { label: "About Advocate&Donate", href: "/about" },
         { label: "Careers", href: "/careers" },
         { label: "Press Kit", href: "/press" },
         { label: "Contact Us", href: "/contact" }
@@ -59,7 +59,7 @@ const Footer = () => {
                 <div className="w-8 h-8 bg-gradient-hero rounded-lg flex items-center justify-center">
                   <Heart className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold">Bridge Needs</span>
+                <span className="text-xl font-bold">Advocate&Donate</span>
               </div>
               <p className="text-white/80 mb-6 max-w-md">
                 Connecting generosity with genuine need. Building stronger communities 
@@ -149,7 +149,7 @@ const Footer = () => {
         <div className="py-6 border-t border-white/20">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
             <div className="text-white/60 text-sm">
-              © 2024 Bridge Needs. All rights reserved.
+              © 2024 Advocate&Donate. All rights reserved.
             </div>
             <div className="flex space-x-6 text-sm">
               <a href="/privacy" className="text-white/60 hover:text-white transition-colors">

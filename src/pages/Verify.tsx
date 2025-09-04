@@ -164,7 +164,7 @@ const Verify = () => {
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="terms" className="rounded border-border" />
                   <label htmlFor="terms" className="text-sm text-muted-foreground">
-                    I certify that all information provided is accurate and complete. I understand that Bridge Needs will verify this information.
+                    I certify that all information provided is accurate and complete. I understand that Advocate&Donate will verify this information.
                   </label>
                 </div>
 
