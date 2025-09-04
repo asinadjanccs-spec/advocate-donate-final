@@ -36,6 +36,22 @@ export interface DonationResult {
   paymentResult?: PaymentResult;
 }
 
+// Donation history interface
+export interface DonationHistory {
+  id: string;
+  amount: number;
+  currency: string;
+  target_type: string;
+  target_name: string;
+  target_id?: string;
+  message?: string;
+  is_recurring: boolean;
+  frequency?: string;
+  payment_status: string;
+  created_at: string;
+  processed_at?: string;
+}
+
 class DonationService {
   private defaultSuggestedAmounts = [25, 50, 100, 250, 500];
 
@@ -380,6 +396,138 @@ class DonationService {
     }
 
     return summary;
+  }
+
+  /**
+   * Get user's donation history
+   */
+  async getUserDonations(limit: number = 50, offset: number = 0): Promise<{
+    donations: DonationHistory[];
+    total: number;
+    error?: string;
+  }> {
+    try {
+      // Check if user is authenticated
+      const isAuth = await isAuthenticated();
+      if (!isAuth) {
+        return {
+          donations: [],
+          total: 0,
+          error: 'You must be signed in to view your donations.'
+        };
+      }
+
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.email) {
+        return {
+          donations: [],
+          total: 0,
+          error: 'Unable to verify your identity. Please sign in again.'
+        };
+      }
+
+      // Fetch donations with pagination
+      const { data: donations, error: donationsError, count } = await supabase
+        .from('donations')
+        .select('*', { count: 'exact' })
+        .eq('donor_email', session.user.email)
+        .eq('payment_status', 'succeeded')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (donationsError) {
+        console.error('Error fetching donations:', donationsError);
+        return {
+          donations: [],
+          total: 0,
+          error: 'Failed to load your donation history. Please try again.'
+        };
+      }
+
+      return {
+        donations: donations || [],
+        total: count || 0,
+        error: undefined
+      };
+    } catch (error) {
+      console.error('Error in getUserDonations:', error);
+      return {
+        donations: [],
+        total: 0,
+        error: 'An unexpected error occurred while loading your donations.'
+      };
+    }
+  }
+
+  /**
+   * Get donation statistics for user
+   */
+  async getUserDonationStats(): Promise<{
+    totalDonated: number;
+    donationCount: number;
+    recurringDonations: number;
+    error?: string;
+  }> {
+    try {
+      // Check if user is authenticated
+      const isAuth = await isAuthenticated();
+      if (!isAuth) {
+        return {
+          totalDonated: 0,
+          donationCount: 0,
+          recurringDonations: 0,
+          error: 'You must be signed in to view your donation statistics.'
+        };
+      }
+
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.email) {
+        return {
+          totalDonated: 0,
+          donationCount: 0,
+          recurringDonations: 0,
+          error: 'Unable to verify your identity. Please sign in again.'
+        };
+      }
+
+      // Fetch donation statistics
+      const { data: donations, error } = await supabase
+        .from('donations')
+        .select('amount, is_recurring')
+        .eq('donor_email', session.user.email)
+        .eq('payment_status', 'succeeded');
+
+      if (error) {
+        console.error('Error fetching donation stats:', error);
+        return {
+          totalDonated: 0,
+          donationCount: 0,
+          recurringDonations: 0,
+          error: 'Failed to load your donation statistics.'
+        };
+      }
+
+      const totalDonated = donations?.reduce((sum, donation) => sum + Number(donation.amount), 0) || 0;
+      const donationCount = donations?.length || 0;
+      const recurringDonations = donations?.filter(d => d.is_recurring).length || 0;
+
+      return {
+        totalDonated,
+        donationCount,
+        recurringDonations,
+        error: undefined
+      };
+    } catch (error) {
+      console.error('Error in getUserDonationStats:', error);
+      return {
+        totalDonated: 0,
+        donationCount: 0,
+        recurringDonations: 0,
+        error: 'An unexpected error occurred while loading your statistics.'
+      };
+    }
   }
 }
 

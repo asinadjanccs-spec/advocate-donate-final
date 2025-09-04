@@ -38,6 +38,7 @@ import DonateOrganization from "./pages/DonateOrganization";
 import DonateCampaign from "./pages/DonateCampaign";
 import DonationSuccess from "./pages/DonationSuccess";
 import Dashboard from "./pages/Dashboard";
+import Donations from "./pages/Donations";
 
 const queryClient = new QueryClient();
 
@@ -71,10 +72,15 @@ const App = () => (
              </PublicRoute>
            } />
            <Route path="/dashboard" element={
-             <RequireAuth>
-               <Dashboard />
-             </RequireAuth>
-           } />
+              <RequireAuth>
+                <Dashboard />
+              </RequireAuth>
+            } />
+            <Route path="/donations" element={
+              <RequireAuth>
+                <Donations />
+              </RequireAuth>
+            } />
           <Route path="/donate" element={
             <RequireAuth>
               <Donate />

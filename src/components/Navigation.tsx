@@ -92,6 +92,12 @@ const Navigation = () => {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
+                      <Link to="/donations" className="flex items-center gap-2">
+                        <Heart className="w-4 h-4" />
+                        My Donations
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link to="/create-campaign" className="flex items-center gap-2">
                         <Heart className="w-4 h-4" />
                         Create Campaign
