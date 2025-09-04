@@ -56,7 +56,10 @@ const Navigation = () => {
             </Button>
             
             {loading ? (
-              <div className="w-8 h-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                <span className="text-sm text-muted-foreground">Loading...</span>
+              </div>
             ) : isAuthenticated ? (
               <>
                 <Button asChild variant="donate" size="sm">
@@ -152,8 +155,9 @@ const Navigation = () => {
             ))}
             <div className="flex flex-col space-y-3 pt-4 border-t border-border">
               {loading ? (
-                <div className="flex justify-center py-4">
+                <div className="flex justify-center items-center space-x-2 py-4">
                   <div className="w-6 h-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                  <span className="text-sm text-muted-foreground">Loading...</span>
                 </div>
               ) : isAuthenticated ? (
                 <>

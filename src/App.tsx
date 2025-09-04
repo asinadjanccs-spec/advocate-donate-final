@@ -36,6 +36,7 @@ import ResetPassword from "./pages/ResetPassword";
 import EmailVerification from "./pages/EmailVerification";
 import DonateOrganization from "./pages/DonateOrganization";
 import DonateCampaign from "./pages/DonateCampaign";
+import DonationSuccess from "./pages/DonationSuccess";
 import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
@@ -51,10 +52,18 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/organizations/:slug" element={<OrganizationDetail />} />
-          <Route path="/organizations/:slug/donate" element={<DonateOrganization />} />
+          <Route path="/organizations/:slug/donate" element={
+            <RequireAuth>
+              <DonateOrganization />
+            </RequireAuth>
+          } />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/campaigns/:id" element={<CampaignDetail />} />
-          <Route path="/campaigns/:id/donate" element={<DonateCampaign />} />
+          <Route path="/campaigns/:id/donate" element={
+            <RequireAuth>
+              <DonateCampaign />
+            </RequireAuth>
+          } />
           <Route path="/about" element={<About />} />
           <Route path="/auth" element={
              <PublicRoute>
@@ -66,7 +75,11 @@ const App = () => (
                <Dashboard />
              </RequireAuth>
            } />
-          <Route path="/donate" element={<Donate />} />
+          <Route path="/donate" element={
+            <RequireAuth>
+              <Donate />
+            </RequireAuth>
+          } />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/stories" element={<Stories />} />
           <Route path="/stories/:slug" element={<StoryDetail />} />
@@ -99,6 +112,7 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<EmailVerification />} />
+          <Route path="/donation/success/:donationId" element={<DonationSuccess />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           </Routes>

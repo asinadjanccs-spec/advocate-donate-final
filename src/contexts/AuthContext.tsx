@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { getCurrentUser, isAuthenticated, validateSessionIntegrity } from '@/lib/auth';
+// Removed complex auth utilities - using direct Supabase auth state
 import { toast } from 'sonner';
 
 interface User {
@@ -45,38 +45,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const { user: userData, error } = await getCurrentUser();
-      if (error) {
-        console.error('Failed to refresh user data:', error);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user as unknown as User);
+      } else {
         setUser(null);
-        return;
       }
-      setUser(userData);
     } catch (error) {
-      console.error('Failed to refresh user data:', error);
+      console.error('Error refreshing user:', error);
       setUser(null);
     }
   };
 
   const signOut = async () => {
     try {
-      setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      
-      // Clear local state
+      await supabase.auth.signOut();
       setUser(null);
       setSession(null);
       setIsAuth(false);
-      
-      toast.success('Successfully signed out');
     } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('Failed to sign out. Please try again.');
-    } finally {
-      setLoading(false);
+      console.error('Error signing out:', error);
     }
   };
 
@@ -96,11 +84,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
+        // Get initial session directly from Supabase
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
+          if (mounted) {
+            setLoading(false);
+          }
           return;
         }
 
@@ -108,24 +99,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSession(initialSession);
           
           if (initialSession?.user) {
-            // Validate session integrity
-            const isValidSession = await validateSessionIntegrity();
-            
-            if (isValidSession) {
-              const authStatus = await isAuthenticated();
-              setIsAuth(authStatus);
-              
-              if (authStatus) {
-                await refreshUser();
-              }
-            } else {
-              // Invalid session, sign out
-              await signOut();
-            }
+            setIsAuth(true);
+            setUser(initialSession.user as unknown as User);
           } else {
             setIsAuth(false);
             setUser(null);
           }
+          
+          setLoading(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -133,9 +114,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setIsAuth(false);
           setUser(null);
           setSession(null);
-        }
-      } finally {
-        if (mounted) {
           setLoading(false);
         }
       }
@@ -156,7 +134,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           case 'SIGNED_IN':
             if (newSession?.user) {
               setIsAuth(true);
-              await refreshUser();
+              setUser(newSession.user as unknown as User);
               toast.success('Successfully signed in');
             }
             break;
@@ -168,21 +146,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
           case 'TOKEN_REFRESHED':
             if (newSession?.user) {
-              await refreshUser();
+              setUser(newSession.user as unknown as User);
             }
             break;
             
           case 'USER_UPDATED':
             if (newSession?.user) {
-              await refreshUser();
+              setUser(newSession.user as unknown as User);
             }
             break;
             
           default:
             break;
         }
-        
-        setLoading(false);
       }
     );
 
@@ -193,27 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  // Periodic session validation
-  useEffect(() => {
-    if (!isAuth || !session) return;
-
-    const validateSession = async () => {
-      try {
-        const isValid = await validateSessionIntegrity();
-        if (!isValid) {
-          console.warn('Session validation failed, signing out');
-          await signOut();
-        }
-      } catch (error) {
-        console.error('Session validation error:', error);
-      }
-    };
-
-    // Validate session every 5 minutes
-    const interval = setInterval(validateSession, 5 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [isAuth, session]);
+  // Removed complex session validation - relying on Supabase's built-in auth state management
 
   const value: AuthContextType = {
     user,

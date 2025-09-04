@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Heart, ArrowLeft, MapPin, Clock } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Heart, ArrowLeft, MapPin, Clock, CreditCard, CheckCircle, AlertCircle, Loader2, User } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import campaignImage from "@/assets/food-donations.jpg";
+import { donationService, DonationFormState, DonationContext } from '../lib/donationService';
+import { MockPaymentMethod } from '../lib/payment';
+import DonationConfirmation from '../components/DonationConfirmation';
+import { useAuth } from "@/contexts/AuthContext";
 
 // Minimal mock data to render campaign context
 const campaigns = [
@@ -42,8 +50,102 @@ const DonateCampaign = () => {
 
   const [selectedAmount, setSelectedAmount] = useState("");
   const [donationType, setDonationType] = useState("one-time");
+  const [showDonationForm, setShowDonationForm] = useState(false);
+  const [formState, setFormState] = useState<DonationFormState>(donationService.initializeFormState());
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<MockPaymentMethod[]>([]);
+  const [donationResult, setDonationResult] = useState<{ success: boolean; donationId?: string; error?: string } | null>(null);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(false);
+  const { user } = useAuth();
 
-  const suggestedAmounts = [250, 500, 1000, 2500, 5000, 10000];
+  useEffect(() => {
+    setAvailablePaymentMethods(donationService.getAvailablePaymentMethods());
+    initializeFormWithAuth();
+  }, []);
+
+  const initializeFormWithAuth = async () => {
+    setIsLoadingUserData(true);
+    try {
+      const initialState = await donationService.initializeFormStateWithAuth();
+      setFormState(initialState);
+    } catch (error) {
+      console.error('Error initializing form with auth:', error);
+    } finally {
+      setIsLoadingUserData(false);
+    }
+  };
+
+  const suggestedAmounts = donationService.getSuggestedAmounts();
+
+  const handleDonate = () => {
+    const amount = parseFloat(selectedAmount);
+    if (amount && campaign) {
+      setFormState(prev => ({
+        ...prev,
+        amount: amount,
+        isRecurring: donationType === "monthly",
+        frequency: donationType === "monthly" ? "monthly" : "yearly"
+      }));
+      setShowDonationForm(true);
+    }
+  };
+
+  const handleFormChange = (field: keyof DonationFormState, value: string | number | boolean | MockPaymentMethod) => {
+    setFormState(prev => ({
+      ...prev,
+      [field]: value,
+      errors: {
+        ...prev.errors,
+        [field]: '' // Clear error when user starts typing
+      }
+    }));
+  };
+
+  const handlePaymentMethodSelect = (paymentMethod: MockPaymentMethod) => {
+    setFormState(prev => ({
+      ...prev,
+      selectedPaymentMethod: paymentMethod
+    }));
+  };
+
+  const handleSubmitDonation = async () => {
+    setFormState(prev => ({ ...prev, isProcessing: true }));
+    
+    try {
+      const context: DonationContext = {
+        campaignId: campaign.id.toString(),
+        campaignTitle: campaign.title,
+        organizationName: campaign.organization
+      };
+      
+      const result = await donationService.processDonation(formState, context);
+      
+      if (result.success) {
+        setDonationResult({
+          success: true,
+          donationId: result.donationId
+        });
+      } else {
+        setDonationResult({
+          success: false,
+          error: result.error
+        });
+      }
+    } catch (error) {
+      setDonationResult({
+        success: false,
+        error: "An unexpected error occurred. Please try again."
+      });
+    } finally {
+      setFormState(prev => ({ ...prev, isProcessing: false }));
+    }
+  };
+
+  const resetDonationFlow = () => {
+    setShowDonationForm(false);
+    setDonationResult(null);
+    setFormState(donationService.initializeFormState());
+    setSelectedAmount("");
+  };
 
   if (!campaign) {
     return (
@@ -142,10 +244,187 @@ const DonateCampaign = () => {
                   </div>
                 </div>
 
-                <Button className="w-full" size="lg" disabled={!selectedAmount}>
+                <Button 
+                  className="w-full" 
+                  size="lg" 
+                  disabled={!selectedAmount}
+                  onClick={handleDonate}
+                >
                   <Heart className="w-4 h-4 mr-2" />
                   {donationType === "monthly" ? "Start Monthly Giving" : "Donate Now"}
                 </Button>
+
+                {/* Donation Form Modal */}
+                {showDonationForm && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+                      <div className="p-6">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xl font-semibold">Complete Your Donation</h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowDonationForm(false)}
+                          >
+                            ×
+                          </Button>
+                        </div>
+
+                        {donationResult ? (
+                          <div className="text-center py-8">
+                            <DonationConfirmation
+                              result={{
+                                success: donationResult.success,
+                                donationId: donationResult.donationId,
+                                error: donationResult.error,
+                                amount: formState.amount,
+                                recipient: campaign.title
+                              }}
+                              onClose={() => setShowDonationForm(false)}
+                              onNewDonation={resetDonationFlow}
+                              recipientType="campaign"
+                              recipientId={campaign.id.toString()}
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {/* Donation Summary */}
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <h4 className="font-semibold mb-2">Donation Summary</h4>
+                              <div className="flex justify-between">
+                                <span>Amount:</span>
+                                <span className="font-semibold">₱{formState.amount}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Type:</span>
+                                <span>{formState.isRecurring ? 'Monthly' : 'One-time'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Campaign:</span>
+                                <span className="text-sm">{campaign.title}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Organization:</span>
+                                <span className="text-sm">{campaign.organization}</span>
+                              </div>
+                            </div>
+
+                            {/* Authenticated User Information */}
+                            <div className="space-y-3">
+                              <div className="bg-muted/50 p-4 rounded-lg border">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <User className="w-4 h-4 text-muted-foreground" />
+                                  <Label className="text-sm font-medium">Donation will be made by:</Label>
+                                </div>
+                                {isLoadingUserData ? (
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="text-sm text-muted-foreground">Loading your information...</span>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                      <span className="text-sm text-muted-foreground">Name:</span>
+                                      <span className="text-sm font-medium">{formState.donorName || 'Not provided'}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-sm text-muted-foreground">Email:</span>
+                                      <span className="text-sm font-medium">{formState.donorEmail || 'Not provided'}</span>
+                                    </div>
+                                    {formState.donorPhone && (
+                                      <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Phone:</span>
+                                        <span className="text-sm font-medium">{formState.donorPhone}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label htmlFor="message">Message (Optional)</Label>
+                                <Textarea
+                                  id="message"
+                                  value={formState.message}
+                                  onChange={(e) => handleFormChange('message', e.target.value)}
+                                  placeholder="Leave a message with your donation"
+                                  rows={3}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Payment Methods */}
+                            <div>
+                              <Label>Payment Method *</Label>
+                              <div className="grid grid-cols-1 gap-2 mt-2">
+                                {availablePaymentMethods.map((method) => (
+                                  <div
+                                    key={method.id}
+                                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                      formState.selectedPaymentMethod?.id === method.id
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                    onClick={() => handlePaymentMethodSelect(method)}
+                                  >
+                                    <div className="flex items-center space-x-3">
+                                      <CreditCard className="w-5 h-5" />
+                                      <div>
+                                        <p className="font-medium">{method.type.toUpperCase()}</p>
+                                        <p className="text-sm text-gray-600">**** **** **** {method.card.last4}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              {formState.errors.selectedPaymentMethod && (
+                                <p className="text-red-500 text-sm mt-1">{formState.errors.selectedPaymentMethod}</p>
+                              )}
+                            </div>
+
+                            {/* Anonymous Donation */}
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="anonymous"
+                                checked={formState.isAnonymous}
+                                onCheckedChange={(checked) => handleFormChange('isAnonymous', checked)}
+                              />
+                              <Label htmlFor="anonymous" className="text-sm">
+                                Make this donation anonymous
+                              </Label>
+                            </div>
+
+                            {/* Submit Button */}
+                            <Button
+                              onClick={handleSubmitDonation}
+                              disabled={formState.isProcessing}
+                              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition-colors"
+                            >
+                              {formState.isProcessing ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : (
+                                `Donate ₱${formState.amount}`
+                              )}
+                            </Button>
+
+                            {/* Error Display */}
+                            {Object.values(formState.errors).some(error => error) && (
+                              <Alert className="border-red-200 bg-red-50">
+                                <AlertCircle className="h-4 w-4 text-red-600" />
+                                <AlertDescription className="text-red-700">
+                                  Please fix the errors above before proceeding.
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <p className="text-sm text-muted-foreground text-center">
                   Your donation is secure and you'll receive a receipt for tax purposes.

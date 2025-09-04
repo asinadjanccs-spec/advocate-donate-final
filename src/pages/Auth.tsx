@@ -9,6 +9,7 @@ import { Heart, ArrowLeft, Eye, EyeOff, AlertCircle, CheckCircle, Loader2 } from
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   signUp, 
   signIn, 
@@ -46,6 +47,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode');
+  const { isAuthenticated, loading: authLoading } = useAuth();
   
   // State management
   const [activeTab, setActiveTab] = useState(mode === 'reset' ? 'signin' : 'signin');
@@ -79,6 +81,14 @@ const Auth = () => {
   useEffect(() => {
     setCsrfToken(generateCSRFToken());
   }, []);
+  
+  // Redirect authenticated users
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      const redirectTo = searchParams.get('redirect') || '/';
+      navigate(redirectTo, { replace: true });
+    }
+  }, [authLoading, isAuthenticated, navigate, searchParams]);
   
   // Handle authentication state changes
   useEffect(() => {
@@ -317,6 +327,20 @@ const Auth = () => {
     }
   };
   
+  // Show loading spinner while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+            <p className="text-sm text-muted-foreground">Checking authentication...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
