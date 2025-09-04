@@ -960,26 +960,39 @@ export const getCurrentSession = (): SessionData | null => {
       // Try to restore from localStorage
       const storedData = localStorage.getItem('bridge_session_data');
       if (storedData) {
-        const parsed = JSON.parse(storedData);
-        if (parsed.expiresAt > Date.now()) {
-          return {
-            ...parsed,
-            lastActivity: Date.now(),
-            deviceInfo: {
-              userAgent: navigator?.userAgent || 'unknown',
-              ipAddress: getClientIP()
-            }
-          };
+        try {
+          const parsed = JSON.parse(storedData);
+          if (parsed.expiresAt > Date.now()) {
+            const restoredSession: SessionData = {
+              ...parsed,
+              lastActivity: Date.now(),
+              deviceInfo: {
+                userAgent: navigator?.userAgent || 'unknown',
+                ipAddress: getClientIP()
+              }
+            };
+            // Restore to sessionStore
+            sessionStore.set(sessionId, restoredSession);
+            return restoredSession;
+          } else {
+            // Clean up expired stored data
+            localStorage.removeItem('bridge_session_data');
+            localStorage.removeItem('bridge_session_id');
+          }
+        } catch (parseError) {
+          console.error('Error parsing stored session data:', parseError);
+          localStorage.removeItem('bridge_session_data');
+          localStorage.removeItem('bridge_session_id');
         }
       }
       return null;
     }
     
     // Check if session is expired
-     if (sessionData.expiresAt < Date.now()) {
-       destroySession(sessionId);
-       return null;
-     }
+    if (sessionData.expiresAt < Date.now()) {
+      destroySession(sessionId);
+      return null;
+    }
     
     return sessionData;
   } catch (error) {
@@ -1089,14 +1102,56 @@ export const destroyAllUserSessions = async (userId: string): Promise<void> => {
  * Validate session and refresh if needed
  */
 export const validateAndRefreshSession = async (): Promise<SessionData | null> => {
-  const session = getCurrentSession();
-  if (!session) return null;
-  
-  // Update activity
-  const updated = await updateSessionActivity(session.sessionId);
-  if (!updated) return null;
-  
-  return sessionStore.get(session.sessionId) || null;
+  try {
+    // First check Supabase session
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Session validation error:', error);
+      return null;
+    }
+    
+    if (!session) {
+      // Clean up local session
+      const sessionId = localStorage.getItem('bridge_session_id');
+      if (sessionId) {
+        await destroySession(sessionId);
+      }
+      return null;
+    }
+    
+    // Check if session is expired and try to refresh
+    const now = Math.floor(Date.now() / 1000);
+    if (session.expires_at && session.expires_at < now) {
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshedSession) {
+        console.error('Session refresh failed:', refreshError);
+        const sessionId = localStorage.getItem('bridge_session_id');
+        if (sessionId) {
+          await destroySession(sessionId);
+        }
+        return null;
+      }
+    }
+    
+    // Get or create local session
+    let localSession = getCurrentSession();
+    if (!localSession && session.user) {
+      // Create new local session if it doesn't exist
+      localSession = await createSession(session.user.id);
+    } else if (localSession) {
+      // Update existing local session activity
+      const updated = await updateSessionActivity(localSession.sessionId);
+      if (!updated) return null;
+      localSession = sessionStore.get(localSession.sessionId) || null;
+    }
+    
+    return localSession;
+  } catch (error) {
+    console.error('Session validation error:', error);
+    return null;
+  }
 };
 
 /**
@@ -1129,7 +1184,14 @@ export const validateSessionIntegrity = async (): Promise<boolean> => {
     // Check if session is still valid
     const now = Math.floor(Date.now() / 1000);
     if (session.expires_at && session.expires_at < now) {
-      return false;
+      // Try to refresh the session before declaring it invalid
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshedSession) {
+        return false;
+      }
+      
+      return true;
     }
     
     return true;
@@ -1196,22 +1258,52 @@ export const sanitizeInput = (input: string): string => {
  */
 export const isAuthenticated = async (): Promise<boolean> => {
   try {
-    // Check local session first
-    const localSession = getCurrentSession();
-    if (!localSession) {
+    // Get current Supabase session
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Session check error:', error);
       return false;
     }
     
-    // Validate with Supabase
-    const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      // Clean up invalid local session
-      await destroySession(localSession.sessionId);
+      // Clean up any local session data
+      const sessionId = localStorage.getItem('bridge_session_id');
+      if (sessionId) {
+        await destroySession(sessionId);
+      }
       return false;
     }
     
-    // Update session activity
-    await updateSessionActivity(localSession.sessionId);
+    // Check if session is expired
+    const now = Math.floor(Date.now() / 1000);
+    if (session.expires_at && session.expires_at < now) {
+      // Try to refresh the session
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshedSession) {
+        console.error('Session refresh failed:', refreshError);
+        const sessionId = localStorage.getItem('bridge_session_id');
+        if (sessionId) {
+          await destroySession(sessionId);
+        }
+        return false;
+      }
+      
+      // Update local session if it exists
+      const sessionId = localStorage.getItem('bridge_session_id');
+      if (sessionId) {
+        await updateSessionActivity(sessionId);
+      }
+      
+      return true;
+    }
+    
+    // Update local session activity if it exists
+    const sessionId = localStorage.getItem('bridge_session_id');
+    if (sessionId) {
+      await updateSessionActivity(sessionId);
+    }
     
     return true;
   } catch (error) {

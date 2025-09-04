@@ -16,6 +16,7 @@ import { donationService, DonationFormState, DonationContext } from "@/lib/donat
 import { MockPaymentMethod } from "@/lib/payment";
 import DonationConfirmation from "@/components/DonationConfirmation";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Donate = () => {
   const [selectedAmount, setSelectedAmount] = useState("");
@@ -93,17 +94,41 @@ const Donate = () => {
           success: true,
           donationId: result.donationId
         });
+        toast.success("Donation processed successfully!");
+      } else {
+        // Check if it's a session-related error
+        if (result.error?.includes('session') || result.error?.includes('expired') || result.error?.includes('authentication')) {
+          toast.error("Your session has expired. Please refresh the page and sign in again.");
+          setDonationResult({
+            success: false,
+            error: result.error + " Please refresh the page and try again."
+          });
+        } else {
+          setDonationResult({
+            success: false,
+            error: result.error
+          });
+          toast.error(result.error || "Donation failed. Please try again.");
+        }
+      }
+    } catch (error) {
+      console.error('Donation submission error:', error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred. Please try again.";
+      
+      // Check if it's a session-related error
+      if (errorMessage.includes('session') || errorMessage.includes('expired') || errorMessage.includes('authentication')) {
+        toast.error("Your session has expired. Please refresh the page and sign in again.");
+        setDonationResult({
+          success: false,
+          error: errorMessage + " Please refresh the page and try again."
+        });
       } else {
         setDonationResult({
           success: false,
-          error: result.error
+          error: errorMessage
         });
+        toast.error("An unexpected error occurred. Please try again.");
       }
-    } catch (error) {
-      setDonationResult({
-        success: false,
-        error: "An unexpected error occurred. Please try again."
-      });
     } finally {
       setFormState(prev => ({ ...prev, isProcessing: false }));
     }

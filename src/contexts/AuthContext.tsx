@@ -45,15 +45,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Try to get current session first
+       let { data: { session } } = await supabase.auth.getSession();
+      
+      // If session is expired, try to refresh it
+      if (session && session.expires_at) {
+        const now = Math.floor(Date.now() / 1000);
+        if (session.expires_at < now) {
+          const refreshResult = await supabase.auth.refreshSession();
+          if (!refreshResult.error && refreshResult.data.session) {
+            session = refreshResult.data.session;
+          } else {
+            console.error('Session refresh failed:', refreshResult.error);
+            session = null;
+          }
+        }
+      }
+      
       if (session?.user) {
         setUser(session.user as unknown as User);
+        setSession(session);
+        setIsAuth(true);
       } else {
         setUser(null);
+        setSession(null);
+        setIsAuth(false);
       }
     } catch (error) {
       console.error('Error refreshing user:', error);
       setUser(null);
+      setSession(null);
+      setIsAuth(false);
     }
   };
 
@@ -63,6 +85,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       setSession(null);
       setIsAuth(false);
+      // Clear local session data
+      localStorage.removeItem('bridge_session_id');
+      localStorage.removeItem('bridge_session_data');
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -142,11 +167,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           case 'SIGNED_OUT':
             setIsAuth(false);
             setUser(null);
+            // Clear any local session data
+            localStorage.removeItem('bridge_session_id');
+            localStorage.removeItem('bridge_session_data');
             break;
             
           case 'TOKEN_REFRESHED':
             if (newSession?.user) {
               setUser(newSession.user as unknown as User);
+              setIsAuth(true);
+              console.log('Token refreshed successfully');
             }
             break;
             

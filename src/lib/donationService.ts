@@ -143,30 +143,48 @@ class DonationService {
     context?: DonationContext
   ): Promise<DonationResult> {
     try {
-      // Validate authentication and session
-      const isAuth = await isAuthenticated();
+      // Validate authentication and session with retry logic
+      let isAuth = await isAuthenticated();
       if (!isAuth) {
-        return {
-          success: false,
-          error: 'You must be signed in to make a donation. Please sign in and try again.',
-        };
+        // Try one more time in case of temporary network issues
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        isAuth = await isAuthenticated();
+        
+        if (!isAuth) {
+          return {
+            success: false,
+            error: 'You must be signed in to make a donation. Please sign in and try again.',
+          };
+        }
       }
 
-      // Validate and refresh session
-      const sessionData = await validateAndRefreshSession();
+      // Validate and refresh session with retry logic
+      let sessionData = await validateAndRefreshSession();
       if (!sessionData) {
-        return {
-          success: false,
-          error: 'Your session has expired. Please sign in again.',
-        };
+        // Try to refresh the session one more time
+        try {
+          const { data: { session }, error } = await supabase.auth.refreshSession();
+          if (!error && session) {
+            sessionData = await validateAndRefreshSession();
+          }
+        } catch (refreshError) {
+          console.error('Session refresh attempt failed:', refreshError);
+        }
+        
+        if (!sessionData) {
+          return {
+            success: false,
+            error: 'Your session has expired. Please refresh the page and sign in again.',
+          };
+        }
       }
 
       // Get current user data for security verification
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.user) {
         return {
           success: false,
-          error: 'Authentication verification failed. Please sign in again.',
+          error: 'Authentication verification failed. Please refresh the page and sign in again.',
         };
       }
 
