@@ -10,26 +10,31 @@ import {
   Shirt,
   ArrowRight
 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { campaignService } from "@/lib/campaignService";
+import { supabase } from "@/integrations/supabase/client";
 import foodImage from "@/assets/food-donations.jpg";
 
 const CategoriesSection = () => {
-  const categories = [
+  const [categories, setCategories] = useState([
     {
       icon: UtensilsCrossed,
       name: "Food Security",
       description: "Meals, groceries, and nutrition programs",
-      activeCampaigns: 23,
-      urgentNeeds: 8,
+      activeCampaigns: 0,
+      urgentNeeds: 0,
+      totalRaised: 0,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
       image: foodImage
     },
     {
       icon: Home,
-      name: "Shelter & Housing",
+      name: "Shelter & Housing", 
       description: "Emergency shelter, housing assistance",
-      activeCampaigns: 15,
-      urgentNeeds: 4,
+      activeCampaigns: 0,
+      urgentNeeds: 0,
+      totalRaised: 0,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
       image: foodImage
@@ -38,8 +43,9 @@ const CategoriesSection = () => {
       icon: GraduationCap,
       name: "Education",
       description: "School supplies, scholarships, programs",
-      activeCampaigns: 31,
-      urgentNeeds: 12,
+      activeCampaigns: 0,
+      urgentNeeds: 0,
+      totalRaised: 0,
       color: "text-green-600",
       bgColor: "bg-green-50",
       image: foodImage
@@ -48,8 +54,9 @@ const CategoriesSection = () => {
       icon: Stethoscope,
       name: "Healthcare",
       description: "Medical assistance, health programs",
-      activeCampaigns: 18,
-      urgentNeeds: 6,
+      activeCampaigns: 0,
+      urgentNeeds: 0,
+      totalRaised: 0,
       color: "text-red-600",
       bgColor: "bg-red-50",
       image: foodImage
@@ -58,8 +65,9 @@ const CategoriesSection = () => {
       icon: Shirt,
       name: "Clothing & Essentials",
       description: "Clothing, hygiene items, basics",
-      activeCampaigns: 27,
-      urgentNeeds: 9,
+      activeCampaigns: 0,
+      urgentNeeds: 0,
+      totalRaised: 0,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
       image: foodImage
@@ -68,13 +76,76 @@ const CategoriesSection = () => {
       icon: Heart,
       name: "Emergency Relief",
       description: "Disaster response, crisis support",
-      activeCampaigns: 12,
-      urgentNeeds: 15,
+      activeCampaigns: 0,
+      urgentNeeds: 0,
+      totalRaised: 0,
       color: "text-pink-600",
       bgColor: "bg-pink-50",
       image: foodImage
     }
-  ];
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategoryStats = async () => {
+      try {
+        setLoading(true);
+        const categoryNames = [
+          "Food Security",
+          "Shelter & Housing", 
+          "Education",
+          "Healthcare",
+          "Clothing & Essentials",
+          "Emergency Relief"
+        ];
+
+        const categoryStats = await Promise.all(
+          categoryNames.map(async (categoryName) => {
+            // Get campaigns count for category
+            const { totalCount: activeCampaigns } = await campaignService.getCampaigns(1, 0, categoryName);
+            
+            // Get urgent campaigns count
+            const { count: urgentCount } = await supabase
+              .from('campaigns')
+              .select('*', { count: 'exact', head: true })
+              .eq('category', categoryName)
+              .eq('status', 'active')
+              .eq('is_urgent', true);
+
+            // Get total raised for category
+            const { data: campaignDonations } = await supabase
+              .from('donations')
+              .select('amount, campaigns!inner(category)')
+              .eq('campaigns.category', categoryName)
+              .eq('payment_status', 'succeeded');
+
+            const totalRaised = campaignDonations?.reduce((sum, d) => sum + d.amount, 0) || 0;
+
+            return {
+              activeCampaigns: activeCampaigns || 0,
+              urgentNeeds: urgentCount || 0,
+              totalRaised
+            };
+          })
+        );
+
+        setCategories(prev => 
+          prev.map((category, index) => ({
+            ...category,
+            activeCampaigns: categoryStats[index].activeCampaigns,
+            urgentNeeds: categoryStats[index].urgentNeeds,
+            totalRaised: categoryStats[index].totalRaised
+          }))
+        );
+      } catch (error) {
+        console.error('Error fetching category stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategoryStats();
+  }, []);
 
   return (
     <section className="py-20 bg-background">
@@ -125,20 +196,24 @@ const CategoriesSection = () => {
 
                 {/* Stats */}
                 <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                  <span>{category.activeCampaigns} active campaigns</span>
+                  <span>{loading ? '...' : category.activeCampaigns} active campaigns</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </div>
 
                 {/* Progress Indicator */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">This Month</span>
-                    <span className="font-medium text-success">₱{(Math.random() * 50 + 10).toFixed(0)}K raised</span>
+                    <span className="text-muted-foreground">Total Raised</span>
+                    <span className="font-medium text-success">
+                      {loading ? '...' : `₱${(category.totalRaised / 1000).toFixed(0)}K`}
+                    </span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-1.5">
                     <div 
                       className="bg-gradient-impact h-1.5 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.random() * 60 + 20}%` }}
+                      style={{ 
+                        width: loading ? '20%' : `${Math.min((category.totalRaised / 100000) * 100, 100)}%` 
+                      }}
                     ></div>
                   </div>
                 </div>

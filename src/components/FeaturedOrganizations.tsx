@@ -3,54 +3,77 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Users, Target, Verified } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { organizationService, type Organization } from "@/lib/organizationService";
+import { useToast } from "@/hooks/use-toast";
 import organizationImage from "@/assets/organization-relief.jpg";
 
 const FeaturedOrganizations = () => {
   const navigate = useNavigate();
-  const organizations = [
-    {
-      id: 1,
-      name: "Hope Community Center",
-      slug: "hope-community-center",
-      location: "Manila, Philippines",
-      description: "Providing food security and shelter support for families in need across Metro Manila.",
-      verified: true,
-      category: "Food Security",
-      supporters: 324,
-      activeGoals: 5,
-      image: organizationImage,
-      totalRaised: "₱125,000",
-      urgentNeed: "Emergency Food Packages"
-    },
-    {
-      id: 2,
-      name: "Shelter First Foundation",
-      slug: "shelter-first-foundation",
-      location: "Cebu City, Philippines",
-      description: "Building safe homes and providing temporary shelter for disaster-affected families.",
-      verified: true,
-      category: "Shelter",
-      supporters: 156,
-      activeGoals: 3,
-      image: organizationImage,
-      totalRaised: "₱89,500",
-      urgentNeed: "Construction Materials"
-    },
-    {
-      id: 3,
-      name: "Education Bridge PH",
-      slug: "education-bridge-ph",
-      location: "Davao City, Philippines",
-      description: "Ensuring every child has access to quality education and learning materials.",
-      verified: true,
-      category: "Education",
-      supporters: 278,
-      activeGoals: 7,
-      image: organizationImage,
-      totalRaised: "₱67,200",
-      urgentNeed: "School Supplies"
-    }
-  ];
+  const { toast } = useToast();
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [organizationStats, setOrganizationStats] = useState<Record<string, {
+    totalRaised: number;
+    donationCount: number;
+    campaignCount: number;
+  }>>({});
+
+  useEffect(() => {
+    const fetchFeaturedOrganizations = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await organizationService.getOrganizations(3, 0);
+        
+        if (error) {
+          toast({
+            title: "Error",
+            description: "Failed to load organizations: " + error,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setOrganizations(data);
+        
+        // Fetch stats for each organization
+        const statsPromises = data.map(org => 
+          organizationService.getOrganizationDonationStats(org.id)
+        );
+        
+        const statsResults = await Promise.all(statsPromises);
+        const statsMap: Record<string, {
+          totalRaised: number;
+          donationCount: number;
+          campaignCount: number;
+        }> = {};
+        
+        data.forEach((org, index) => {
+          const stats = statsResults[index];
+          if (!stats.error) {
+            statsMap[org.id] = {
+              totalRaised: stats.totalRaised,
+              donationCount: stats.donationCount,
+              campaignCount: stats.campaignCount
+            };
+          }
+        });
+        
+        setOrganizationStats(statsMap);
+      } catch (error) {
+        console.error('Error fetching featured organizations:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load organizations",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedOrganizations();
+  }, [toast]);
 
   return (
     <section className="py-20 bg-muted/30">
@@ -71,7 +94,24 @@ const FeaturedOrganizations = () => {
 
         {/* Organizations Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {organizations.map((org) => (
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} className="animate-pulse">
+                <div className="h-48 bg-muted"></div>
+                <div className="p-6 space-y-4">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                  <div className="h-16 bg-muted rounded"></div>
+                </div>
+              </Card>
+            ))
+          ) : organizations.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-muted-foreground">No organizations found.</p>
+            </div>
+          ) : (
+            organizations.map((org) => (
             <Card
               key={org.id}
               className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-card cursor-pointer"
@@ -80,14 +120,14 @@ const FeaturedOrganizations = () => {
               {/* Organization Image */}
               <div className="relative h-48 overflow-hidden">
                 <img
-                  src={org.image}
+                  src={org.banner_url || org.logo_url || organizationImage}
                   alt={org.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute top-4 left-4">
-                  <Badge variant={org.verified ? "default" : "secondary"} className="bg-success text-success-foreground">
+                  <Badge variant={org.verification_status === 'verified' ? "default" : "secondary"} className="bg-success text-success-foreground">
                     <Verified className="w-3 h-3 mr-1" />
-                    Verified
+                    {org.verification_status === 'verified' ? 'Verified' : 'Pending'}
                   </Badge>
                 </div>
                 <div className="absolute top-4 right-4">
@@ -107,7 +147,7 @@ const FeaturedOrganizations = () => {
                 
                 <div className="flex items-center text-muted-foreground text-sm mb-3">
                   <MapPin className="w-4 h-4 mr-1" />
-                  {org.location}
+                  {org.city ? `${org.city}, ${org.state || org.country}` : org.country || 'Location not specified'}
                 </div>
 
                 <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
@@ -118,18 +158,20 @@ const FeaturedOrganizations = () => {
                 <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-1" />
-                    {org.supporters} supporters
+                    {organizationStats[org.id]?.donationCount || 0} donors
                   </div>
                   <div className="flex items-center">
                     <Target className="w-4 h-4 mr-1" />
-                    {org.activeGoals} active goals
+                    {organizationStats[org.id]?.campaignCount || 0} campaigns
                   </div>
                 </div>
 
-                {/* Urgent Need */}
-                <div className="bg-impact-light rounded-lg p-3 mb-4">
-                  <div className="text-xs text-impact-dark font-medium mb-1">Urgent Need</div>
-                  <div className="text-sm font-semibold text-impact">{org.urgentNeed}</div>
+                {/* Total Raised */}
+                <div className="bg-success-light rounded-lg p-3 mb-4">
+                  <div className="text-xs text-success-dark font-medium mb-1">Total Raised</div>
+                  <div className="text-sm font-semibold text-success">
+                    ₱{(organizationStats[org.id]?.totalRaised || 0).toLocaleString()}
+                  </div>
                 </div>
 
                 {/* Actions */}
@@ -151,7 +193,7 @@ const FeaturedOrganizations = () => {
                     className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/donate`);
+                      navigate(`/organizations/${org.slug}/donate`);
                     }}
                   >
                     Donate Now
@@ -159,7 +201,8 @@ const FeaturedOrganizations = () => {
                 </div>
               </div>
             </Card>
-          ))}
+          ))
+          )}
         </div>
 
         {/* View All Button */}

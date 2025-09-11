@@ -2,14 +2,47 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, Target, Heart } from "lucide-react";
 import heroImage from "@/assets/hero-community.jpg";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { organizationService } from "@/lib/organizationService";
+import { campaignService } from "@/lib/campaignService";
+import { supabase } from "@/integrations/supabase/client";
 
 const HeroSection = () => {
   const navigate = useNavigate();
-  const stats = [
-    { icon: Users, label: "Organizations Helped", value: "150+" },
-    { icon: Target, label: "Campaigns Active", value: "89" },
-    { icon: Heart, label: "Lives Impacted", value: "10K+" }
-  ];
+  const [stats, setStats] = useState([
+    { icon: Users, label: "Organizations Helped", value: "..." },
+    { icon: Target, label: "Campaigns Active", value: "..." },
+    { icon: Heart, label: "Lives Impacted", value: "..." }
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Get organizations count
+        const { data: orgs, totalCount: orgCount } = await organizationService.getOrganizations(1, 0);
+        
+        // Get campaigns count
+        const { data: campaigns, totalCount: campaignCount } = await campaignService.getCampaigns(1, 0);
+        
+        // Get total donations count for lives impacted
+        const { count: donationsCount } = await supabase
+          .from('donations')
+          .select('*', { count: 'exact', head: true })
+          .eq('payment_status', 'succeeded');
+
+        setStats([
+          { icon: Users, label: "Organizations Helped", value: `${orgCount || 0}+` },
+          { icon: Target, label: "Campaigns Active", value: `${campaignCount || 0}` },
+          { icon: Heart, label: "Lives Impacted", value: `${Math.floor((donationsCount || 0) / 10)}K+` }
+        ]);
+      } catch (error) {
+        console.error('Error fetching hero stats:', error);
+        // Keep loading state if error
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   return (
     <section className="relative bg-gradient-hero min-h-[90vh] flex items-center overflow-hidden">
@@ -77,15 +110,15 @@ const HeroSection = () => {
               <h3 className="text-xl font-semibold text-white mb-4">Quick Impact</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-white/90">
-                  <span>Food Security</span>
-                  <span className="font-semibold">$2,450 raised</span>
+                  <span>Active Campaigns</span>
+                  <span className="font-semibold">Making Real Impact</span>
                 </div>
                 <div className="w-full bg-white/20 rounded-full h-2">
                   <div className="bg-impact h-2 rounded-full w-3/4"></div>
                 </div>
                 <div className="flex items-center justify-between text-white/90">
-                  <span>Shelter Support</span>
-                  <span className="font-semibold">89 items pledged</span>
+                  <span>Verified Organizations</span>
+                  <span className="font-semibold">Trusted Partners</span>
                 </div>
                 <div className="w-full bg-white/20 rounded-full h-2">
                   <div className="bg-success h-2 rounded-full w-1/2"></div>

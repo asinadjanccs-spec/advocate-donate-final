@@ -189,7 +189,7 @@ const OrganizationDetail = () => {
                 <Card
                   key={c.id}
                   className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-                  onClick={() => navigate(`/campaigns/${c.id}`)}
+                  onClick={() => navigate(`/campaigns/${c.slug}`)}
                 >
                   <div className="relative">
                     <img 
