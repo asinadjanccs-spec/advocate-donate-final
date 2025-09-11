@@ -10,11 +10,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Heart, ArrowLeft, MapPin, Verified, CreditCard, CheckCircle, AlertCircle, Loader2, User } from "lucide-react";
+import { Heart, ArrowLeft, MapPin, Verified, CreditCard, CheckCircle, AlertCircle, Loader2, User, Smartphone } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import organizationImage from "@/assets/organization-relief.jpg";
 import { donationService, DonationFormState, DonationContext } from "../lib/donationService";
 import { MockPaymentMethod } from "../lib/payment";
+import { PaymentMethodDB } from "../lib/paymentMethodService";
 import DonationConfirmation from "../components/DonationConfirmation";
 import { useAuth } from "@/contexts/AuthContext";
 import { organizationService, OrganizationWithCampaigns } from "@/lib/organizationService";
@@ -30,7 +31,7 @@ const DonateOrganization = () => {
   const [donationType, setDonationType] = useState("one-time");
   const [showDonationForm, setShowDonationForm] = useState(false);
   const [formState, setFormState] = useState<DonationFormState>(donationService.initializeFormState());
-  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<MockPaymentMethod[]>([]);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethodDB[]>([]);
   const [donationResult, setDonationResult] = useState<{ success: boolean; donationId?: string; error?: string } | null>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const { user } = useAuth();
@@ -60,7 +61,12 @@ const DonateOrganization = () => {
   }, [slug]);
 
   useEffect(() => {
-    setAvailablePaymentMethods(donationService.getAvailablePaymentMethods());
+    const loadPaymentMethods = async () => {
+      const { methods } = await donationService.getAvailablePaymentMethods();
+      setAvailablePaymentMethods(methods);
+    };
+    
+    loadPaymentMethods();
     initializeFormWithAuth();
     loadOrganization();
   }, [slug, loadOrganization]);
@@ -92,7 +98,7 @@ const DonateOrganization = () => {
     }
   };
 
-  const handleFormChange = (field: string, value: string | number | boolean | MockPaymentMethod) => {
+  const handleFormChange = (field: string, value: string | number | boolean | PaymentMethodDB) => {
     setFormState(prev => ({
       ...prev,
       [field]: value,
@@ -103,7 +109,7 @@ const DonateOrganization = () => {
     }));
   };
 
-  const handlePaymentMethodSelect = (method: MockPaymentMethod) => {
+  const handlePaymentMethodSelect = (method: PaymentMethodDB) => {
     handleFormChange('selectedPaymentMethod', method);
   };
 
@@ -371,25 +377,44 @@ const DonateOrganization = () => {
                             <div>
                               <Label>Payment Method *</Label>
                               <div className="grid grid-cols-1 gap-2 mt-2">
-                                {availablePaymentMethods.map((method) => (
-                                  <div
-                                    key={method.id}
-                                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                      formState.selectedPaymentMethod?.id === method.id
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                    onClick={() => handlePaymentMethodSelect(method)}
-                                  >
-                                    <div className="flex items-center space-x-3">
-                                      <CreditCard className="w-5 h-5" />
-                                      <div>
-                                        <p className="font-medium">{method.type.toUpperCase()}</p>
-                                        <p className="text-sm text-gray-600">**** **** **** {method.card.last4}</p>
+                                {availablePaymentMethods.map((method) => {
+                                  const isDigitalWallet = method.type === 'digital_wallet';
+                                  const isGCash = isDigitalWallet && method.provider_payment_method_id?.startsWith('09');
+                                  
+                                  return (
+                                    <div
+                                      key={method.id}
+                                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                        formState.selectedPaymentMethod?.id === method.id
+                                          ? 'border-blue-500 bg-blue-50'
+                                          : 'border-gray-200 hover:border-gray-300'
+                                      }`}
+                                      onClick={() => handlePaymentMethodSelect(method)}
+                                    >
+                                      <div className="flex items-center space-x-3">
+                                        {isDigitalWallet ? (
+                                          <Smartphone className="w-5 h-5" />
+                                        ) : (
+                                          <CreditCard className="w-5 h-5" />
+                                        )}
+                                        <div>
+                                          <p className="font-medium">
+                                            {isGCash 
+                                              ? 'GCASH' 
+                                              : method.card_brand?.toUpperCase() || 'CARD'
+                                            }
+                                          </p>
+                                          <p className="text-sm text-gray-600">
+                                            {isDigitalWallet 
+                                              ? `•••• •••• ${method.bank_account_last4 || '0000'}`
+                                              : `**** **** **** ${method.card_last4 || '0000'}`
+                                            }
+                                          </p>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                               {formState.errors.selectedPaymentMethod && (
                                 <p className="text-red-500 text-sm mt-1">{formState.errors.selectedPaymentMethod}</p>

@@ -11,7 +11,8 @@ import {
   Lock, 
   ArrowLeft, 
   Loader2,
-  AlertTriangle 
+  AlertTriangle,
+  Smartphone 
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
@@ -64,6 +65,15 @@ const PaymentMethods: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addingMethod, setAddingMethod] = useState(false);
+  const [selectedPaymentType, setSelectedPaymentType] = useState<'card' | 'gcash'>('card');
+  const [gcashNumber, setGcashNumber] = useState('');
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: '',
+    expiryMonth: '',
+    expiryYear: '',
+    cvc: '',
+    nickname: ''
+  });
   const [showBillingDialog, setShowBillingDialog] = useState(false);
   const [savingBilling, setSavingBilling] = useState(false);
   const [billingAddress, setBillingAddress] = useState({
@@ -214,17 +224,83 @@ const PaymentMethods: React.FC = () => {
   const handleAddMethod = async () => {
     setAddingMethod(true);
     try {
-      // Note: In a real implementation, this would integrate with a payment processor like Stripe
-      // to securely tokenize the card details before storing in the database
-      // For now, we'll show a placeholder implementation
+      let paymentMethodData;
+
+      if (selectedPaymentType === 'gcash') {
+        // Validate GCash number
+        if (!gcashNumber || gcashNumber.length !== 11 || !gcashNumber.startsWith('09')) {
+          toast({
+            title: "Invalid GCash Number",
+            description: "Please enter a valid GCash mobile number (09XXXXXXXXX)",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Prepare GCash payment method data
+        paymentMethodData = {
+          provider_payment_method_id: `gcash_${gcashNumber}`,
+          provider: 'gcash',
+          type: 'digital_wallet' as const,
+          nickname: `GCash ${gcashNumber}`,
+          is_default: paymentMethods.length === 0, // Set as default if it's the first payment method
+          is_active: true,
+          is_verified: false // GCash verification happens during payment
+        };
+
+        // Store the last 4 digits of the phone number for display
+        const last4 = gcashNumber.slice(-4);
+        paymentMethodData = {
+          ...paymentMethodData,
+          bank_account_last4: last4 // Using bank_account_last4 field for GCash number last 4 digits
+        };
+
+      } else {
+        // Card payment method implementation
+        toast({
+          title: "Feature Coming Soon",
+          description: "Credit card integration is currently in development. Please use GCash for now.",
+          variant: "default"
+        });
+        return;
+      }
+
+      // Add the payment method to database
+      const { data, error } = await paymentMethodService.addPaymentMethod(paymentMethodData);
       
-      toast({
-        title: "Feature Coming Soon",
-        description: "Payment method integration with Stripe is currently in development. This feature will be available soon.",
-        variant: "default"
+      if (error) {
+        console.error('Error adding payment method:', error);
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data) {
+        // Add to local state
+        const newMethod = convertDBPaymentMethod(data);
+        setPaymentMethods(prev => [...prev, newMethod]);
+
+        toast({
+          title: "Success",
+          description: "GCash payment method added successfully",
+        });
+      }
+      
+      // Reset form and close dialog
+      setGcashNumber('');
+      setCardDetails({
+        cardNumber: '',
+        expiryMonth: '',
+        expiryYear: '',
+        cvc: '',
+        nickname: ''
       });
-      
+      setSelectedPaymentType('card');
       setShowAddDialog(false);
+      
     } catch (error) {
       console.error('Error adding payment method:', error);
       toast({
@@ -289,7 +365,11 @@ const PaymentMethods: React.FC = () => {
     setBillingAddress(prev => ({ ...prev, [field]: value }));
   };
 
-  const getCardIcon = (brand?: string) => {
+  const getPaymentMethodIcon = (type: string, brand?: string) => {
+    if (type === 'digital_wallet') {
+      return '📱'; // GCash icon
+    }
+    
     switch (brand?.toLowerCase()) {
       case 'visa':
         return '💳';
@@ -300,6 +380,13 @@ const PaymentMethods: React.FC = () => {
       default:
         return '💳';
     }
+  };
+
+  const getPaymentMethodDisplayName = (type: string, brand?: string) => {
+    if (type === 'digital_wallet') {
+      return 'GCash';
+    }
+    return brand ? brand.charAt(0).toUpperCase() + brand.slice(1) : 'Card';
   };
 
   if (loading) {
@@ -377,59 +464,137 @@ const PaymentMethods: React.FC = () => {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="card-number">Card Number</Label>
-                      <Input
-                        id="card-number"
-                        placeholder="1234 5678 9012 3456"
-                        className="text-lg tracking-wider"
-                      />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="expiry-month">Month</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="MM" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 12 }, (_, i) => (
-                              <SelectItem key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                                {String(i + 1).padStart(2, '0')}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="expiry-year">Year</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="YYYY" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 10 }, (_, i) => (
-                              <SelectItem key={i} value={String(2024 + i)}>
-                                {2024 + i}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="cvc">CVC</Label>
-                        <Input
-                          id="cvc"
-                          placeholder="123"
-                          maxLength={4}
-                        />
+                    {/* Payment Type Selection */}
+                    <div className="grid gap-3">
+                      <Label>Payment Method Type</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPaymentType('card')}
+                          className={`p-4 border-2 rounded-lg flex flex-col items-center gap-2 transition-colors ${
+                            selectedPaymentType === 'card'
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <CreditCard className="h-6 w-6" />
+                          <span className="font-medium">Credit/Debit Card</span>
+                          <span className="text-xs text-gray-500">Visa, Mastercard, etc.</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPaymentType('gcash')}
+                          className={`p-4 border-2 rounded-lg flex flex-col items-center gap-2 transition-colors ${
+                            selectedPaymentType === 'gcash'
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <Smartphone className="h-6 w-6" />
+                          <span className="font-medium">GCash</span>
+                          <span className="text-xs text-gray-500">Digital wallet</span>
+                        </button>
                       </div>
                     </div>
+
+                    {/* Card Details Form */}
+                    {selectedPaymentType === 'card' && (
+                      <>
+                        <div className="grid gap-2">
+                          <Label htmlFor="card-number">Card Number</Label>
+                          <Input
+                            id="card-number"
+                            placeholder="1234 5678 9012 3456"
+                            className="text-lg tracking-wider"
+                            value={cardDetails.cardNumber}
+                            onChange={(e) => setCardDetails(prev => ({ ...prev, cardNumber: e.target.value }))}
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="expiry-month">Month</Label>
+                            <Select value={cardDetails.expiryMonth} onValueChange={(value) => setCardDetails(prev => ({ ...prev, expiryMonth: value }))}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="MM" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 12 }, (_, i) => (
+                                  <SelectItem key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                                    {String(i + 1).padStart(2, '0')}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="expiry-year">Year</Label>
+                            <Select value={cardDetails.expiryYear} onValueChange={(value) => setCardDetails(prev => ({ ...prev, expiryYear: value }))}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="YYYY" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 10 }, (_, i) => (
+                                  <SelectItem key={i} value={String(2024 + i)}>
+                                    {2024 + i}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="cvc">CVC</Label>
+                            <Input
+                              id="cvc"
+                              placeholder="123"
+                              maxLength={4}
+                              value={cardDetails.cvc}
+                              onChange={(e) => setCardDetails(prev => ({ ...prev, cvc: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* GCash Details Form */}
+                    {selectedPaymentType === 'gcash' && (
+                      <>
+                        <div className="grid gap-2">
+                          <Label htmlFor="gcash-number">GCash Mobile Number</Label>
+                          <Input
+                            id="gcash-number"
+                            placeholder="09XX XXX XXXX"
+                            className="text-lg"
+                            value={gcashNumber}
+                            onChange={(e) => setGcashNumber(e.target.value)}
+                            maxLength={11}
+                          />
+                        </div>
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <Smartphone className="h-4 w-4 text-blue-600 mt-0.5" />
+                            <div className="text-sm">
+                              <p className="font-medium text-blue-900 mb-1">GCash Integration</p>
+                              <p className="text-blue-700">
+                                Enter your GCash mobile number. You'll be redirected to the GCash app to authorize payments when making donations.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Common Nickname Field */}
                     <div className="grid gap-2">
                       <Label htmlFor="nickname">Nickname (Optional)</Label>
                       <Input
                         id="nickname"
-                        placeholder="My Personal Card"
+                        placeholder={selectedPaymentType === 'card' ? 'My Personal Card' : 'My GCash Account'}
+                        value={selectedPaymentType === 'card' ? cardDetails.nickname : gcashNumber ? 'GCash Account' : ''}
+                        onChange={(e) => {
+                          if (selectedPaymentType === 'card') {
+                            setCardDetails(prev => ({ ...prev, nickname: e.target.value }));
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -480,18 +645,19 @@ const PaymentMethods: React.FC = () => {
                     >
                       <div className="flex items-center gap-4">
                         <div className="text-2xl">
-                          {getCardIcon(method.brand)}
+                          {getPaymentMethodIcon(method.type, method.brand)}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">
-                              •••• •••• •••• {method.last4}
+                              {method.type === 'digital_wallet' ? 
+                                `•••• •••• ${method.last4}` : 
+                                `•••• •••• •••• ${method.last4}`
+                              }
                             </span>
-                            {method.brand && (
-                              <Badge variant="secondary" className="capitalize">
-                                {method.brand}
-                              </Badge>
-                            )}
+                            <Badge variant="secondary" className="capitalize">
+                              {getPaymentMethodDisplayName(method.type, method.brand)}
+                            </Badge>
                             {method.isDefault && (
                               <Badge className="bg-green-100 text-green-800">
                                 Default
@@ -500,9 +666,12 @@ const PaymentMethods: React.FC = () => {
                           </div>
                           <div className="text-sm text-gray-500">
                             {method.nickname && `${method.nickname} • `}
-                            {method.expiryMonth && method.expiryYear && 
+                            {method.type === 'digital_wallet' ? (
+                              'Digital Wallet'
+                            ) : (
+                              method.expiryMonth && method.expiryYear && 
                               `Expires ${method.expiryMonth.toString().padStart(2, '0')}/${method.expiryYear}`
-                            }
+                            )}
                             {method.lastUsedAt && (
                               <span className="ml-2">• Last used {new Date(method.lastUsedAt).toLocaleDateString()}</span>
                             )}

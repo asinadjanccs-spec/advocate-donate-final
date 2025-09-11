@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Heart, ArrowLeft, MapPin, Clock, CreditCard, CheckCircle, AlertCircle, Loader2, User } from "lucide-react";
+import { Heart, ArrowLeft, MapPin, Clock, CreditCard, CheckCircle, AlertCircle, Loader2, User, Smartphone } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import campaignImage from "@/assets/food-donations.jpg";
 import { donationService, DonationFormState, DonationContext } from '../lib/donationService';
-import { MockPaymentMethod } from '../lib/payment';
+import { type PaymentMethodDB } from '../lib/paymentMethodService';
 import DonationConfirmation from '../components/DonationConfirmation';
 import { useAuth } from "@/contexts/AuthContext";
 import { campaignService, type CampaignWithOrganization } from "@/lib/campaignService";
@@ -30,18 +30,30 @@ const DonateCampaign = () => {
   const [donationType, setDonationType] = useState("one-time");
   const [showDonationForm, setShowDonationForm] = useState(false);
   const [formState, setFormState] = useState<DonationFormState>(donationService.initializeFormState());
-  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<MockPaymentMethod[]>([]);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethodDB[]>([]);
+  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
   const [donationResult, setDonationResult] = useState<{ success: boolean; donationId?: string; error?: string } | null>(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
   const { user } = useAuth();
 
-  useEffect(() => {
-    setAvailablePaymentMethods(donationService.getAvailablePaymentMethods());
-    initializeFormWithAuth();
-    fetchCampaign();
-  }, [id]);
+  const loadPaymentMethods = useCallback(async () => {
+    try {
+      const result = await donationService.getAvailablePaymentMethods();
+      if (result.error) {
+        setPaymentMethodsError(result.error);
+        setAvailablePaymentMethods([]);
+      } else {
+        setAvailablePaymentMethods(result.methods);
+        setPaymentMethodsError(null);
+      }
+    } catch (error) {
+      console.error('Error loading payment methods:', error);
+      setPaymentMethodsError('Failed to load payment methods');
+      setAvailablePaymentMethods([]);
+    }
+  }, []);
 
-  const fetchCampaign = async () => {
+  const fetchCampaign = useCallback(async () => {
     if (!id) return;
     
     setLoading(true);
@@ -57,9 +69,9 @@ const DonateCampaign = () => {
     }
     
     setLoading(false);
-  };
+  }, [id]);
 
-  const initializeFormWithAuth = async () => {
+  const initializeFormWithAuth = useCallback(async () => {
     setIsLoadingUserData(true);
     try {
       const initialState = await donationService.initializeFormStateWithAuth();
@@ -69,7 +81,7 @@ const DonateCampaign = () => {
     } finally {
       setIsLoadingUserData(false);
     }
-  };
+  }, []);
 
   const suggestedAmounts = donationService.getSuggestedAmounts();
 
@@ -86,7 +98,7 @@ const DonateCampaign = () => {
     }
   };
 
-  const handleFormChange = (field: keyof DonationFormState, value: string | number | boolean | MockPaymentMethod) => {
+  const handleFormChange = (field: keyof DonationFormState, value: string | number | boolean | PaymentMethodDB) => {
     setFormState(prev => ({
       ...prev,
       [field]: value,
@@ -97,7 +109,7 @@ const DonateCampaign = () => {
     }));
   };
 
-  const handlePaymentMethodSelect = (paymentMethod: MockPaymentMethod) => {
+  const handlePaymentMethodSelect = (paymentMethod: PaymentMethodDB) => {
     setFormState(prev => ({
       ...prev,
       selectedPaymentMethod: paymentMethod
@@ -143,6 +155,12 @@ const DonateCampaign = () => {
     setFormState(donationService.initializeFormState());
     setSelectedAmount("");
   };
+
+  useEffect(() => {
+    loadPaymentMethods();
+    initializeFormWithAuth();
+    fetchCampaign();
+  }, [loadPaymentMethods, initializeFormWithAuth, fetchCampaign]);
 
   if (loading) {
     return (
@@ -374,27 +392,68 @@ const DonateCampaign = () => {
                             {/* Payment Methods */}
                             <div>
                               <Label>Payment Method *</Label>
-                              <div className="grid grid-cols-1 gap-2 mt-2">
-                                {availablePaymentMethods.map((method) => (
-                                  <div
-                                    key={method.id}
-                                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                      formState.selectedPaymentMethod?.id === method.id
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                    onClick={() => handlePaymentMethodSelect(method)}
-                                  >
-                                    <div className="flex items-center space-x-3">
-                                      <CreditCard className="w-5 h-5" />
-                                      <div>
-                                        <p className="font-medium">{method.type.toUpperCase()}</p>
-                                        <p className="text-sm text-gray-600">**** **** **** {method.card.last4}</p>
+                              {paymentMethodsError ? (
+                                <Alert className="mt-2 border-orange-200 bg-orange-50">
+                                  <AlertCircle className="h-4 w-4 text-orange-600" />
+                                  <AlertDescription className="text-orange-700">
+                                    {paymentMethodsError}. You may need to add a payment method first.
+                                  </AlertDescription>
+                                </Alert>
+                              ) : availablePaymentMethods.length === 0 ? (
+                                <Alert className="mt-2 border-blue-200 bg-blue-50">
+                                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                                  <AlertDescription className="text-blue-700">
+                                    No payment methods found. Please add a payment method to continue.
+                                  </AlertDescription>
+                                </Alert>
+                              ) : (
+                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                  {availablePaymentMethods.map((method) => (
+                                    <div
+                                      key={method.id}
+                                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                                        formState.selectedPaymentMethod?.id === method.id
+                                          ? 'border-blue-500 bg-blue-50'
+                                          : 'border-gray-200 hover:border-gray-300'
+                                      }`}
+                                      onClick={() => handlePaymentMethodSelect(method)}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3">
+                                          {method.type === 'digital_wallet' ? (
+                                            <Smartphone className="w-5 h-5" />
+                                          ) : (
+                                            <CreditCard className="w-5 h-5" />
+                                          )}
+                                          <div>
+                                            <p className="font-medium">
+                                              {method.type === 'digital_wallet' ? 'GCash' : (method.card_brand?.toUpperCase() || method.type.toUpperCase())}
+                                              {method.is_default && (
+                                                <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                                  Default
+                                                </span>
+                                              )}
+                                            </p>
+                                            <p className="text-sm text-gray-600">
+                                              {method.type === 'digital_wallet'
+                                                ? `•••• •••• ${method.bank_account_last4 || method.card_last4 || '0000'}`
+                                                : `**** **** **** ${method.card_last4 || '0000'}`}
+                                            </p>
+                                            {method.nickname && (
+                                              <p className="text-xs text-gray-500">{method.nickname}</p>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {method.card_exp_month && method.card_exp_year && (
+                                          <div className="text-xs text-gray-500">
+                                            Expires {method.card_exp_month.toString().padStart(2, '0')}/{method.card_exp_year}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
+                                  ))}
+                                </div>
+                              )}
                               {formState.errors.selectedPaymentMethod && (
                                 <p className="text-red-500 text-sm mt-1">{formState.errors.selectedPaymentMethod}</p>
                               )}
@@ -415,14 +474,16 @@ const DonateCampaign = () => {
                             {/* Submit Button */}
                             <Button
                               onClick={handleSubmitDonation}
-                              disabled={formState.isProcessing}
-                              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition-colors"
+                              disabled={formState.isProcessing || availablePaymentMethods.length === 0 || !formState.selectedPaymentMethod}
+                              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {formState.isProcessing ? (
                                 <>
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                   Processing...
                                 </>
+                              ) : availablePaymentMethods.length === 0 ? (
+                                'Add Payment Method First'
                               ) : (
                                 `Donate ₱${formState.amount}`
                               )}

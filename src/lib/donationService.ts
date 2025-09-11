@@ -1,4 +1,5 @@
 import { paymentService, DonationData, PaymentResult, MockPaymentMethod } from './payment';
+import { paymentMethodService, type PaymentMethodDB } from './paymentMethodService';
 import { isAuthenticated, validateAndRefreshSession } from './auth';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesInsert } from '@/integrations/supabase/types';
@@ -13,7 +14,7 @@ export interface DonationFormState {
   message: string;
   isRecurring: boolean;
   frequency: 'monthly' | 'quarterly' | 'yearly';
-  selectedPaymentMethod: MockPaymentMethod | null;
+  selectedPaymentMethod: PaymentMethodDB | null;
   isAnonymous?: boolean;
   isProcessing: boolean;
   errors: Record<string, string>;
@@ -140,7 +141,7 @@ class DonationService {
 
     // Validate payment method
     if (!formState.selectedPaymentMethod) {
-      errors.paymentMethod = 'Please select a payment method';
+      errors.selectedPaymentMethod = 'Please select a payment method';
     }
 
     // Validate recurring donation frequency
@@ -231,10 +232,22 @@ class DonationService {
       // Create payment intent
       const paymentIntent = await paymentService.createPaymentIntent(donationData);
 
+      // Convert real payment method to mock format for payment service compatibility
+      const mockPaymentMethod: MockPaymentMethod = {
+        id: formState.selectedPaymentMethod!.provider_payment_method_id,
+        type: 'card',
+        card: {
+          brand: (formState.selectedPaymentMethod!.card_brand as 'visa' | 'mastercard' | 'amex') || 'visa',
+          last4: formState.selectedPaymentMethod!.card_last4 || '0000',
+          exp_month: formState.selectedPaymentMethod!.card_exp_month || 12,
+          exp_year: formState.selectedPaymentMethod!.card_exp_year || 2025
+        }
+      };
+
       // Process payment
       const paymentResult = await paymentService.confirmPayment(
         paymentIntent.client_secret,
-        formState.selectedPaymentMethod!
+        mockPaymentMethod
       );
 
       if (!paymentResult.success) {
@@ -320,10 +333,32 @@ class DonationService {
   }
 
   /**
-   * Get available payment methods
+   * Get available payment methods for current user
    */
-  getAvailablePaymentMethods(): MockPaymentMethod[] {
-    return paymentService.generateMockPaymentMethods();
+  async getAvailablePaymentMethods(): Promise<{
+    methods: PaymentMethodDB[];
+    error?: string;
+  }> {
+    try {
+      const { data, error } = await paymentMethodService.getUserPaymentMethods();
+      
+      if (error) {
+        return {
+          methods: [],
+          error
+        };
+      }
+
+      return {
+        methods: data || [],
+        error: undefined
+      };
+    } catch (error) {
+      return {
+        methods: [],
+        error: error instanceof Error ? error.message : 'Failed to load payment methods'
+      };
+    }
   }
 
   /**
