@@ -132,8 +132,8 @@ const AdminOrganizations = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'approved':
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
+      case 'verified':
+        return <Badge className="bg-green-100 text-green-800">Verified</Badge>;
       case 'rejected':
         return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
       case 'suspended':
@@ -181,7 +181,7 @@ const AdminOrganizations = () => {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="verified">Verified</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
@@ -237,10 +237,10 @@ const AdminOrganizations = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{org.type}</Badge>
+                        <Badge variant="outline">{org.category}</Badge>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(org.approval_status)}
+                        {getStatusBadge(org.verification_status)}
                       </TableCell>
                       <TableCell>
                         {org.created_at && formatDate(org.created_at)}
@@ -275,8 +275,8 @@ const AdminOrganizations = () => {
                                       <p className="text-sm text-gray-600">{selectedOrg.name}</p>
                                     </div>
                                     <div>
-                                      <label className="font-medium">Type</label>
-                                      <p className="text-sm text-gray-600">{selectedOrg.type}</p>
+                                      <label className="font-medium">Category</label>
+                                      <p className="text-sm text-gray-600">{selectedOrg.category}</p>
                                     </div>
                                     <div>
                                       <label className="font-medium">Registration Number</label>
@@ -298,7 +298,7 @@ const AdminOrganizations = () => {
                                     </div>
                                     <div>
                                       <label className="font-medium">Current Status</label>
-                                      <div className="mt-1">{getStatusBadge(selectedOrg.approval_status)}</div>
+                                      <div className="mt-1">{getStatusBadge(selectedOrg.verification_status)}</div>
                                     </div>
                                   </div>
 
@@ -323,11 +323,11 @@ const AdminOrganizations = () => {
                                   </div>
 
                                   {/* Previous Notes */}
-                                  {selectedOrg.approval_notes && (
+                                  {selectedOrg.verification_documents && (
                                     <div>
-                                      <label className="font-medium">Previous Notes</label>
+                                      <label className="font-medium">Verification Documents</label>
                                       <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-                                        {selectedOrg.approval_notes}
+                                        {JSON.stringify(selectedOrg.verification_documents, null, 2)}
                                       </p>
                                     </div>
                                   )}
@@ -345,7 +345,7 @@ const AdminOrganizations = () => {
 
                                   {/* Action Buttons */}
                                   <div className="flex space-x-2 pt-4">
-                                    {selectedOrg.approval_status !== 'approved' && (
+                                    {selectedOrg.verification_status !== 'verified' && (
                                       <Button
                                         onClick={() => handleApprovalAction(selectedOrg.id, 'approved')}
                                         disabled={actionLoading}
@@ -356,7 +356,7 @@ const AdminOrganizations = () => {
                                       </Button>
                                     )}
                                     
-                                    {selectedOrg.approval_status !== 'rejected' && (
+                                    {selectedOrg.verification_status !== 'rejected' && (
                                       <Button
                                         variant="destructive"
                                         onClick={() => handleApprovalAction(selectedOrg.id, 'rejected')}
@@ -367,7 +367,7 @@ const AdminOrganizations = () => {
                                       </Button>
                                     )}
                                     
-                                    {selectedOrg.approval_status === 'approved' && (
+                                    {selectedOrg.verification_status === 'verified' && (
                                       <Button
                                         variant="outline"
                                         onClick={() => handleApprovalAction(selectedOrg.id, 'suspended')}
