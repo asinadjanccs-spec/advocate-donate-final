@@ -38,7 +38,10 @@ export const getContentSecurityPolicy = (): string => {
       'https://*.supabase.in',
       'https://api.stripe.com',
       'wss://*.supabase.co',
-      'wss://*.supabase.in'
+      'wss://*.supabase.in',
+      'https://vercel.com',
+      'https://*.blob.vercel-storage.com',
+      'https://api.vercel.com'
     ],
     'frame-src': [
       "'self'",
@@ -156,7 +159,10 @@ export const applySecurityHeaders = (): void => {
         'https://*.supabase.in',
         'https://api.stripe.com',
         'wss://*.supabase.co',
-        'wss://*.supabase.in'
+        'wss://*.supabase.in',
+        'https://vercel.com',
+        'https://*.blob.vercel-storage.com',
+        'https://api.vercel.com'
       ],
       'frame-src': [
         "'self'",

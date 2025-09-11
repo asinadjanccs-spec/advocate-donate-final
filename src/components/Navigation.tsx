@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Heart, Search, User, LogOut, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { userService, UserProfile } from "@/lib/userService";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +16,7 @@ import {
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const { user, isAuthenticated, signOut, loading } = useAuth();
 
   const navItems = [
@@ -23,6 +25,19 @@ const Navigation = () => {
     { label: "How It Works", href: "/how-it-works" },
     { label: "About", href: "/about" }
   ];
+
+  // Fetch user profile when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const fetchUserProfile = async () => {
+        const { data: profile } = await userService.getCurrentUserProfile();
+        setUserProfile(profile);
+      };
+      fetchUserProfile();
+    } else {
+      setUserProfile(null);
+    }
+  }, [isAuthenticated, user]);
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border">
@@ -99,12 +114,14 @@ const Navigation = () => {
                         My Donations
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/create-campaign" className="flex items-center gap-2">
-                        <Heart className="w-4 h-4" />
-                        Create Campaign
-                      </Link>
-                    </DropdownMenuItem>
+                    {userProfile?.user_type === 'nonprofit' && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/create-campaign" className="flex items-center gap-2">
+                          <Heart className="w-4 h-4" />
+                          Create Campaign
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={signOut}

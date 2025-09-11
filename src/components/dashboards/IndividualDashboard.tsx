@@ -289,28 +289,36 @@ const IndividualDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button variant="outline" className="h-16 flex flex-col gap-1">
-              <User className="h-4 w-4" />
-              <span className="text-sm font-medium">Edit Profile</span>
-              <span className="text-xs text-gray-500">Update your information</span>
+            <Button asChild variant="outline" className="h-16 flex flex-col gap-1">
+              <Link to="/edit-profile">
+                <User className="h-4 w-4" />
+                <span className="text-sm font-medium">Edit Profile</span>
+                <span className="text-xs text-gray-500">Update your information</span>
+              </Link>
             </Button>
             
-            <Button variant="outline" className="h-16 flex flex-col gap-1">
-              <CreditCard className="h-4 w-4" />
-              <span className="text-sm font-medium">Payment Methods</span>
-              <span className="text-xs text-gray-500">Manage saved cards</span>
+            <Button asChild variant="outline" className="h-16 flex flex-col gap-1">
+              <Link to="/payment-methods">
+                <CreditCard className="h-4 w-4" />
+                <span className="text-sm font-medium">Payment Methods</span>
+                <span className="text-xs text-gray-500">Manage saved cards</span>
+              </Link>
             </Button>
             
-            <Button variant="outline" className="h-16 flex flex-col gap-1">
-              <Shield className="h-4 w-4" />
-              <span className="text-sm font-medium">Privacy Settings</span>
-              <span className="text-xs text-gray-500">Control your data</span>
+            <Button asChild variant="outline" className="h-16 flex flex-col gap-1">
+              <Link to="/privacy-settings">
+                <Shield className="h-4 w-4" />
+                <span className="text-sm font-medium">Privacy Settings</span>
+                <span className="text-xs text-gray-500">Control your data</span>
+              </Link>
             </Button>
             
-            <Button variant="outline" className="h-16 flex flex-col gap-1">
-              <Mail className="h-4 w-4" />
-              <span className="text-sm font-medium">Notifications</span>
-              <span className="text-xs text-gray-500">Email preferences</span>
+            <Button asChild variant="outline" className="h-16 flex flex-col gap-1">
+              <Link to="/notification-settings">
+                <Mail className="h-4 w-4" />
+                <span className="text-sm font-medium">Notifications</span>
+                <span className="text-xs text-gray-500">Email preferences</span>
+              </Link>
             </Button>
           </div>
         </CardContent>

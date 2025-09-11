@@ -40,6 +40,10 @@ import DonationSuccess from "./pages/DonationSuccess";
 import Dashboard from "./pages/Dashboard";
 import Donations from "./pages/Donations";
 import OrganizationSetup from "./pages/OrganizationSetup";
+import EditProfile from "./pages/EditProfile";
+import PrivacySettings from "./pages/PrivacySettings";
+import PaymentMethods from "./pages/PaymentMethods";
+import NotificationSettings from "./pages/NotificationSettings";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +89,26 @@ const App = () => (
             <Route path="/donations" element={
               <RequireAuth>
                 <Donations />
+              </RequireAuth>
+            } />
+            <Route path="/edit-profile" element={
+              <RequireAuth>
+                <EditProfile />
+              </RequireAuth>
+            } />
+            <Route path="/privacy-settings" element={
+              <RequireAuth>
+                <PrivacySettings />
+              </RequireAuth>
+            } />
+            <Route path="/payment-methods" element={
+              <RequireAuth>
+                <PaymentMethods />
+              </RequireAuth>
+            } />
+            <Route path="/notification-settings" element={
+              <RequireAuth>
+                <NotificationSettings />
               </RequireAuth>
             } />
           <Route path="/donate" element={
