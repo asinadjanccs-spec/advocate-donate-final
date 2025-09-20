@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
@@ -7,13 +7,10 @@ import { Checkbox } from './ui/checkbox';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import {
   CreditCard,
   Package,
   Settings,
-  ChevronDown,
-  ChevronRight,
   Info,
   AlertCircle,
   CheckCircle,
@@ -47,17 +44,9 @@ const CampaignDonationSettings: React.FC<CampaignDonationSettingsProps> = ({
   const [organizationSettings, setOrganizationSettings] = useState<OrganizationDonationSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(value.donation_types_override);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(value.donation_types_override || true);
 
-  useEffect(() => {
-    loadOrganizationSettings();
-  }, [organizationId]);
-
-  useEffect(() => {
-    setShowAdvanced(value.donation_types_override);
-  }, [value.donation_types_override]);
-
-  const loadOrganizationSettings = async () => {
+  const loadOrganizationSettings = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -75,9 +64,17 @@ const CampaignDonationSettings: React.FC<CampaignDonationSettingsProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId]);
 
-  const handleSettingChange = (field: keyof CampaignDonationSettingsForm, newValue: any) => {
+  useEffect(() => {
+    loadOrganizationSettings();
+  }, [loadOrganizationSettings]);
+
+  useEffect(() => {
+    setShowAdvanced(value.donation_types_override || true);
+  }, [value.donation_types_override]);
+
+  const handleSettingChange = (field: keyof CampaignDonationSettingsForm, newValue: boolean | string[] | string | undefined) => {
     const updatedSettings = {
       ...value,
       [field]: newValue
@@ -157,28 +154,39 @@ const CampaignDonationSettings: React.FC<CampaignDonationSettingsProps> = ({
                 <Settings2 className="h-4 w-4" />
               </div>
               <div>
-                <h4 className="font-medium">Donation Type Settings</h4>
+                <h4 className="font-medium">Campaign Donation Preferences</h4>
                 <p className="text-sm text-muted-foreground">
                   {value.donation_types_override 
-                    ? 'Using custom settings for this campaign'
-                    : 'Inheriting from organization settings'
+                    ? 'Using custom settings - you can disable physical donations or change categories for this campaign'
+                    : 'Inheriting organization settings - cash and physical donations as configured for your organization'
                   }
                 </p>
               </div>
             </div>
-            <Switch
-              checked={value.donation_types_override}
-              onCheckedChange={(checked) => {
-                handleSettingChange('donation_types_override', checked);
-                if (!checked) {
-                  // Reset override fields when disabling
-                  handleSettingChange('accepts_cash_donations', undefined);
-                  handleSettingChange('accepts_physical_donations', undefined);
-                  handleSettingChange('physical_donation_categories', undefined);
-                  handleSettingChange('physical_donation_instructions', '');
-                }
-              }}
-            />
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">
+                {value.donation_types_override ? 'Custom' : 'Inherit'}
+              </span>
+              <Switch
+                checked={value.donation_types_override}
+                onCheckedChange={(checked) => {
+                  handleSettingChange('donation_types_override', checked);
+                  if (!checked) {
+                    // Reset override fields when disabling
+                    handleSettingChange('accepts_cash_donations', true);
+                    handleSettingChange('accepts_physical_donations', false);
+                    handleSettingChange('physical_donation_categories', []);
+                    handleSettingChange('physical_donation_instructions', '');
+                  } else if (organizationSettings) {
+                    // Initialize with org settings when enabling override
+                    handleSettingChange('accepts_cash_donations', organizationSettings.accepts_cash_donations);
+                    handleSettingChange('accepts_physical_donations', organizationSettings.accepts_physical_donations);
+                    handleSettingChange('physical_donation_categories', organizationSettings.physical_donation_categories || []);
+                    handleSettingChange('physical_donation_instructions', organizationSettings.physical_donation_instructions || '');
+                  }
+                }}
+              />
+            </div>
           </div>
 
           {!value.donation_types_override && showInheritedSettings && organizationSettings && (
@@ -208,15 +216,13 @@ const CampaignDonationSettings: React.FC<CampaignDonationSettingsProps> = ({
 
         {/* Custom Settings */}
         {value.donation_types_override && (
-          <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="w-full justify-between p-0 h-auto">
-                <span className="font-medium">Campaign-Specific Settings</span>
-                {showAdvanced ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </Button>
-            </CollapsibleTrigger>
-            
-            <CollapsibleContent className="space-y-6 pt-4">
+          <div className="space-y-6 pt-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium">Campaign-Specific Settings</h4>
+              <Badge variant="outline" className="text-xs">
+                Override Active
+              </Badge>
+            </div>
               {/* Donation Types */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Cash Donations */}
@@ -238,6 +244,7 @@ const CampaignDonationSettings: React.FC<CampaignDonationSettingsProps> = ({
                             onCheckedChange={(checked) => 
                               handleSettingChange('accepts_cash_donations', checked)
                             }
+                            className="data-[state=unchecked]:bg-gray-300 data-[state=checked]:bg-primary"
                           />
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -249,9 +256,28 @@ const CampaignDonationSettings: React.FC<CampaignDonationSettingsProps> = ({
                 </Card>
 
                 {/* Physical Donations */}
-                <Card className={`cursor-pointer transition-colors ${
-                  value.accepts_physical_donations ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/50'
-                }`}>
+                <Card
+                  className={`cursor-pointer transition-colors ${
+                    value.accepts_physical_donations ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/50'
+                  }`}
+                  onClick={() =>
+                    handleSettingChange(
+                      'accepts_physical_donations',
+                      !(value.accepts_physical_donations ?? false)
+                    )
+                  }
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSettingChange(
+                        'accepts_physical_donations',
+                        !(value.accepts_physical_donations ?? false)
+                      );
+                    }
+                  }}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-3">
                       <div className={`p-2 rounded-full ${
@@ -260,14 +286,22 @@ const CampaignDonationSettings: React.FC<CampaignDonationSettingsProps> = ({
                         <Package className="h-4 w-4" />
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between w-full">
                           <span className="font-medium">Physical Donations</span>
-                          <Switch
-                            checked={value.accepts_physical_donations ?? false}
-                            onCheckedChange={(checked) => 
-                              handleSettingChange('accepts_physical_donations', checked)
-                            }
-                          />
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={value.accepts_physical_donations ?? false}
+                              onCheckedChange={(checked) => {
+                                handleSettingChange('accepts_physical_donations', checked);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              className="data-[state=unchecked]:bg-gray-300 data-[state=checked]:bg-primary"
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {value.accepts_physical_donations ? 'ON' : 'OFF'}
+                            </span>
+                          </div>
                         </div>
                         <p className="text-sm text-muted-foreground">
                           Accept donated items and goods
@@ -343,8 +377,7 @@ const CampaignDonationSettings: React.FC<CampaignDonationSettingsProps> = ({
                   </div>
                 </div>
               )}
-            </CollapsibleContent>
-          </Collapsible>
+          </div>
         )}
 
         {/* Effective Settings Summary */}

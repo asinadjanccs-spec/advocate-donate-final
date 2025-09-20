@@ -88,6 +88,16 @@ export interface CampaignDonationSettingsForm {
   physical_donation_instructions: string;
 }
 
+export interface CampaignDonationSettingsValue {
+  override_organization_settings: boolean;
+  accepts_cash_donations?: boolean;
+  accepts_physical_donations?: boolean;
+  physical_donation_categories?: string[];
+  physical_donation_instructions?: string;
+  pickup_address?: string;
+  pickup_schedule?: Record<string, { available: boolean; start: string; end: string }>;
+}
+
 // Validation interfaces
 export interface DonationSettingsValidation {
   isValid: boolean;

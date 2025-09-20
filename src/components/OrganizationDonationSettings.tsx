@@ -113,7 +113,7 @@ const OrganizationDonationSettings: React.FC<OrganizationDonationSettingsProps> 
     }
   };
 
-  const handleSettingChange = (field: keyof OrganizationDonationSettingsForm, value: any) => {
+  const handleSettingChange = (field: keyof OrganizationDonationSettingsForm, value: boolean | string[] | string | Record<string, any>) => {
     setSettings(prev => ({
       ...prev,
       [field]: value
@@ -230,9 +230,28 @@ const OrganizationDonationSettings: React.FC<OrganizationDonationSettingsProps> 
             </Card>
 
             {/* Physical Donations */}
-            <Card className={`cursor-pointer transition-colors ${
-              settings.accepts_physical_donations ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/50'
-            }`}>
+            <Card
+              className={`cursor-pointer transition-colors ${
+                settings.accepts_physical_donations ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/50'
+              }`}
+              onClick={() =>
+                handleSettingChange(
+                  'accepts_physical_donations',
+                  !settings.accepts_physical_donations
+                )
+              }
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleSettingChange(
+                    'accepts_physical_donations',
+                    !settings.accepts_physical_donations
+                  );
+                }
+              }}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
                   <div className={`p-2 rounded-full ${
@@ -241,14 +260,22 @@ const OrganizationDonationSettings: React.FC<OrganizationDonationSettingsProps> 
                     <Package className="h-4 w-4" />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between w-full">
                       <span className="font-medium">Physical Donations</span>
-                      <Switch
-                        checked={settings.accepts_physical_donations}
-                        onCheckedChange={(checked) => 
-                          handleSettingChange('accepts_physical_donations', checked)
-                        }
-                      />
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={settings.accepts_physical_donations}
+                          onCheckedChange={(checked) => {
+                            handleSettingChange('accepts_physical_donations', checked);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          className="data-[state=unchecked]:bg-gray-300 data-[state=checked]:bg-primary"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {settings.accepts_physical_donations ? 'ON' : 'OFF'}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Accept donated items and goods

@@ -53,6 +53,7 @@ import AdminOrganizations from "./pages/admin/AdminOrganizations";
 import AdminCampaigns from "./pages/admin/AdminCampaigns";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminActivity from "./pages/admin/AdminActivity";
+import OrganizationDonationPreferences from "./pages/OrganizationDonationPreferences";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +128,11 @@ const App = () => (
             <Route path="/view-donors" element={
               <RequireAuth>
                 <ViewDonors />
+              </RequireAuth>
+            } />
+            <Route path="/organization-donation-preferences" element={
+              <RequireAuth>
+                <OrganizationDonationPreferences />
               </RequireAuth>
             } />
           <Route path="/donate" element={

@@ -470,15 +470,16 @@ const OrganizationDashboard: React.FC = () => {
               <span className="text-xs text-gray-500">Manage received donations</span>
             </Button>
             
-            <Button 
-              variant="outline" 
-              className="w-full h-20 flex flex-col gap-2"
-              onClick={() => setShowDonationSettings(!showDonationSettings)}
-            >
-              <Settings className="h-5 w-5" />
-              <span className="font-medium">Donation Settings</span>
-              <span className="text-xs text-gray-500">Configure donation types</span>
-            </Button>
+            <Link to="/organization-donation-preferences">
+              <Button 
+                variant="outline" 
+                className="w-full h-20 flex flex-col gap-2"
+              >
+                <Settings className="h-5 w-5" />
+                <span className="font-medium">Donation Settings</span>
+                <span className="text-xs text-gray-500">Configure donation types</span>
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

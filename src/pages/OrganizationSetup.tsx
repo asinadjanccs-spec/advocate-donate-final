@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, CheckCircle, ArrowLeft, Loader2, AlertCircle, Upload, X } from 'lucide-react';
+import { Building2, CheckCircle, ArrowLeft, Loader2, AlertCircle, Upload, X, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import { userService, UserProfileWithOrganization } from '@/lib/userService';
 import { organizationService } from '@/lib/organizationService';
 import { uploadImage, validateImageFile, createImagePreview, revokeImagePreview } from '@/lib/imageUpload';
+import OrganizationDonationSettings from '@/components/OrganizationDonationSettings';
 import { toast } from '@/hooks/use-toast';
 
 interface OrganizationSetupForm {
@@ -612,6 +613,40 @@ const OrganizationSetup: React.FC = () => {
           </div>
         );
 
+      case 4:
+        return (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <Settings className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-2">Organization Donation Settings</h4>
+                  <p className="text-sm text-blue-700">
+                    Configure what types of donations your organization accepts when users donate directly to your organization. 
+                    Note that individual campaigns can have their own separate donation settings.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {userProfile?.organization && (
+              <OrganizationDonationSettings
+                organizationId={userProfile.organization.id}
+                className=""
+              />
+            )}
+            
+            {!userProfile?.organization && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Donation settings will be configured after your organization is created.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -644,7 +679,7 @@ const OrganizationSetup: React.FC = () => {
 
           {/* Progress Steps */}
           <div className="flex items-center justify-center mb-8">
-            {[1, 2, 3].map((stepNumber) => (
+            {[1, 2, 3, 4].map((stepNumber) => (
               <React.Fragment key={stepNumber}>
                 <div className="flex items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -660,9 +695,10 @@ const OrganizationSetup: React.FC = () => {
                     {stepNumber === 1 && 'Basic Info'}
                     {stepNumber === 2 && 'Contact & Location'}
                     {stepNumber === 3 && 'Legal & Verification'}
+                    {stepNumber === 4 && 'Donation Settings'}
                   </span>
                 </div>
-                {stepNumber < 3 && (
+                {stepNumber < 4 && (
                   <div className={`mx-4 h-0.5 w-12 ${
                     stepNumber < step ? 'bg-primary' : 'bg-gray-200'
                   }`} />
@@ -678,11 +714,13 @@ const OrganizationSetup: React.FC = () => {
                 Step {step}: {step === 1 && 'Basic Information'}
                 {step === 2 && 'Contact & Location'}
                 {step === 3 && 'Legal & Verification'}
+                {step === 4 && 'Donation Settings'}
               </CardTitle>
               <CardDescription>
                 {step === 1 && 'Tell us about your organization and its mission'}
                 {step === 2 && 'Provide contact information and address'}
                 {step === 3 && 'Complete legal information for verification'}
+                {step === 4 && 'Configure what types of donations your organization accepts'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -700,7 +738,7 @@ const OrganizationSetup: React.FC = () => {
                 </div>
 
                 <div>
-                  {step < 3 ? (
+                  {step < 4 ? (
                     <Button onClick={handleNext}>
                       Next
                     </Button>

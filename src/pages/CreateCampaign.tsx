@@ -10,11 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Heart, Target, Calendar, DollarSign, Image as ImageIcon, Upload, X, Loader2, AlertCircle } from "lucide-react";
+import { Heart, Target, Calendar, DollarSign, Image as ImageIcon, Upload, X, Loader2, AlertCircle, Settings } from "lucide-react";
 import { organizationService } from '@/lib/organizationService';
 import { campaignService } from '@/lib/campaignService';
 import { uploadImage, validateImageFile, createImagePreview, revokeImagePreview } from '@/lib/imageUpload';
 import { toast } from '@/hooks/use-toast';
+import CampaignDonationSettings from '@/components/CampaignDonationSettings';
+import { CampaignDonationSettingsForm } from '@/types/organizations';
 import type { Tables } from '@/integrations/supabase/types';
 
 interface CampaignForm {
@@ -27,6 +29,10 @@ interface CampaignForm {
   currency: string;
   end_date: string;
   featured_image_url: string;
+}
+
+interface ExtendedCampaignForm extends CampaignForm {
+  donationSettings: CampaignDonationSettingsForm;
 }
 
 const CreateCampaign: React.FC = () => {
@@ -47,6 +53,13 @@ const CreateCampaign: React.FC = () => {
     currency: 'PHP',
     end_date: '',
     featured_image_url: ''
+  });
+  const [donationSettings, setDonationSettings] = useState<CampaignDonationSettingsForm>({
+    donation_types_override: false, // Default to inheriting organization settings
+    accepts_cash_donations: true,  // Default to accepting cash donations
+    accepts_physical_donations: false, // Default when no organization data
+    physical_donation_categories: [],
+    physical_donation_instructions: ''
   });
   
   // Image upload state
@@ -151,7 +164,17 @@ const CreateCampaign: React.FC = () => {
 
   // Validate form
   const validateForm = (): boolean => {
+    // Basic validation
     const errors: Partial<CampaignForm> = {};
+
+    // Validate donation settings - only validate if override is enabled
+    if (donationSettings.donation_types_override) {
+      const hasAtLeastOneType = donationSettings.accepts_cash_donations || donationSettings.accepts_physical_donations;
+      if (!hasAtLeastOneType) {
+        setError('You must enable at least one donation type (cash or physical) when using custom settings.');
+        return false;
+      }
+    }
 
     if (!formData.title.trim()) errors.title = 'Campaign title is required';
     if (!formData.category) errors.category = 'Category is required';
@@ -200,19 +223,26 @@ const CreateCampaign: React.FC = () => {
       // Create campaign data
       const campaignData = {
         organization_id: organization.id,
-        slug: finalSlug,
         title: formData.title.trim(),
-        description: formData.description.trim(),
+        slug: finalSlug,
+        category: formData.category,
         short_description: formData.short_description.trim(),
+        description: formData.description.trim(),
         fund_usage_description: formData.fund_usage.trim(),
         goal_amount: parseFloat(formData.goal_amount),
         currency: formData.currency,
-        end_date: formData.end_date,
-        category: formData.category,
+        end_date: new Date(formData.end_date).toISOString(),
         featured_image_url: imageUrl || null,
+        created_at: new Date().toISOString(),
         status: 'active' as const,
         is_featured: false,
-        is_urgent: false
+        is_urgent: false,
+        // Campaign donation settings (inherit from org or override)
+        donation_types_override: donationSettings.donation_types_override,
+        accepts_cash_donations: donationSettings.donation_types_override ? donationSettings.accepts_cash_donations : null,
+        accepts_physical_donations: donationSettings.donation_types_override ? donationSettings.accepts_physical_donations : null,
+        physical_donation_categories: donationSettings.donation_types_override ? donationSettings.physical_donation_categories : null,
+        physical_donation_instructions: donationSettings.donation_types_override ? donationSettings.physical_donation_instructions : null
       };
 
       const { data: campaign, error: createError } = await campaignService.createCampaign(campaignData);
@@ -441,6 +471,29 @@ const CreateCampaign: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Donation Settings */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    Donation Settings
+                  </h3>
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      By default, campaigns inherit your organization's donation settings. You can override these settings to customize physical donation options specifically for this campaign.
+                    </p>
+                    {organization && (
+                      <CampaignDonationSettings
+                        campaignId="" // This is a new campaign, so no ID yet
+                        organizationId={organization.id}
+                        value={donationSettings}
+                        onChange={setDonationSettings}
+                        className=""
+                        showInheritedSettings={true}
+                      />
+                    )}
+                  </div>
+                </div>
+
                 {/* Media Upload */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -530,11 +583,37 @@ const CreateCampaign: React.FC = () => {
                     </Alert>
                   )}
                   
-                  <div className="flex items-center gap-2 mb-4">
-                    <input type="checkbox" id="terms" className="rounded border-border" />
-                    <label htmlFor="terms" className="text-sm text-muted-foreground">
-                      I agree to the <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and confirm that all information is accurate.
-                    </label>
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="terms" className="rounded border-border" />
+                      <label htmlFor="terms" className="text-sm text-muted-foreground">
+                        I agree to the <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and confirm that all information is accurate.
+                      </label>
+                    </div>
+                    
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <Settings className="w-4 h-4 text-blue-600 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-medium text-blue-900 mb-1">Campaign Donation Settings</p>
+                          <p className="text-blue-700">
+                            {donationSettings.donation_types_override ? (
+                              <>Custom settings: Accepts {[
+                                donationSettings.accepts_cash_donations && 'cash donations',
+                                donationSettings.accepts_physical_donations && 'physical donations'
+                              ].filter(Boolean).join(' and ') || 'no donations'}
+                              {donationSettings.accepts_physical_donations && donationSettings.physical_donation_categories && donationSettings.physical_donation_categories.length > 0 && (
+                                <span className="ml-2 text-xs">
+                                  ({donationSettings.physical_donation_categories.length} categories)
+                                </span>
+                              )}</>
+                            ) : (
+                              'Inheriting from organization donation settings'
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="flex gap-4">
