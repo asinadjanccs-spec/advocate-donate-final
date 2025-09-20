@@ -3,20 +3,27 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Shield, Calendar, Heart, DollarSign, TrendingUp, ArrowRight, CreditCard, Settings } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Heart, DollarSign, TrendingUp, ArrowRight, CreditCard, Settings, Package } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { donationService, DonationHistory } from '@/lib/donationService';
+import { unifiedDonationService } from '@/lib/unifiedDonationService';
 import { userService, UserProfile } from '@/lib/userService';
+import UnifiedDonationHistory from '@/components/UnifiedDonationHistory';
+import { DonationStats } from '@/types/donations';
 
 const IndividualDashboard: React.FC = () => {
   const { user, isEmailVerified } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [recentDonations, setRecentDonations] = useState<DonationHistory[]>([]);
-  const [donationStats, setDonationStats] = useState({
-    totalDonated: 0,
-    donationCount: 0,
-    recurringDonations: 0
+  const [donationStats, setDonationStats] = useState<DonationStats>({
+    totalCashDonations: 0,
+    totalPhysicalDonations: 0,
+    totalCashAmount: 0,
+    totalEstimatedValue: 0,
+    donationsByMonth: [],
+    topCategories: []
   });
+  const [showFullHistory, setShowFullHistory] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
@@ -43,23 +50,17 @@ const IndividualDashboard: React.FC = () => {
           setUserProfile(profile);
         }
 
-        // Load donation data
-        const [donationsResult, statsResult] = await Promise.all([
-          donationService.getUserDonations(3, 0), // Get last 3 donations
-          donationService.getUserDonationStats()
+        // Load unified donation data
+        const [donationsResult, unifiedStats] = await Promise.all([
+          donationService.getUserDonations(3, 0), // Get last 3 donations for compatibility
+          unifiedDonationService.getDonationStats({ userId: user?.id })
         ]);
 
         if (!donationsResult.error) {
           setRecentDonations(donationsResult.donations);
         }
 
-        if (!statsResult.error) {
-          setDonationStats({
-            totalDonated: statsResult.totalDonated,
-            donationCount: statsResult.donationCount,
-            recurringDonations: statsResult.recurringDonations
-          });
-        }
+        setDonationStats(unifiedStats);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -68,7 +69,7 @@ const IndividualDashboard: React.FC = () => {
     };
 
     loadDashboardData();
-  }, []);
+  }, [user?.id]);
 
   if (loading) {
     return (
@@ -160,28 +161,38 @@ const IndividualDashboard: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
               <DollarSign className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold text-green-900">{formatCurrency(donationStats.totalDonated)}</p>
-                <p className="text-sm text-green-700">Total Donated</p>
+                <p className="text-2xl font-bold text-green-900">{formatCurrency(donationStats.totalCashAmount, 'PHP')}</p>
+                <p className="text-sm text-green-700">Cash Donated</p>
+                <p className="text-xs text-green-600">{donationStats.totalCashDonations} donations</p>
               </div>
             </div>
             
             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-              <Heart className="h-8 w-8 text-blue-600" />
+              <Package className="h-8 w-8 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold text-blue-900">{donationStats.donationCount}</p>
-                <p className="text-sm text-blue-700">Donations Made</p>
+                <p className="text-2xl font-bold text-blue-900">{formatCurrency(donationStats.totalEstimatedValue, 'PHP')}</p>
+                <p className="text-sm text-blue-700">Physical Value</p>
+                <p className="text-xs text-blue-600">{donationStats.totalPhysicalDonations} donations</p>
               </div>
             </div>
             
             <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
-              <TrendingUp className="h-8 w-8 text-purple-600" />
+              <Heart className="h-8 w-8 text-purple-600" />
               <div>
-                <p className="text-2xl font-bold text-purple-900">{donationStats.recurringDonations}</p>
-                <p className="text-sm text-purple-700">Recurring Donations</p>
+                <p className="text-2xl font-bold text-purple-900">{donationStats.totalCashDonations + donationStats.totalPhysicalDonations}</p>
+                <p className="text-sm text-purple-700">Total Donations</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-lg">
+              <TrendingUp className="h-8 w-8 text-orange-600" />
+              <div>
+                <p className="text-2xl font-bold text-orange-900">{formatCurrency(donationStats.totalCashAmount + donationStats.totalEstimatedValue, 'PHP')}</p>
+                <p className="text-sm text-orange-700">Total Impact</p>
               </div>
             </div>
           </div>
@@ -214,10 +225,18 @@ const IndividualDashboard: React.FC = () => {
                 ))}
               </div>
               
-              <div className="flex justify-center mt-4">
+              <div className="flex justify-center mt-4 gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={() => setShowFullHistory(!showFullHistory)}
+                >
+                  {showFullHistory ? 'Hide' : 'View'} All Donations
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
                 <Link to="/donations">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    View All Donations
+                  <Button variant="default" className="flex items-center gap-2">
+                    Donation History Page
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
@@ -265,16 +284,29 @@ const IndividualDashboard: React.FC = () => {
               </Button>
             </Link>
             
-            <Link to="/donations">
-              <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                <DollarSign className="h-5 w-5" />
-                <span className="font-medium">View Donation History</span>
-                <span className="text-xs text-gray-500">Track your contributions</span>
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              className="w-full h-20 flex flex-col gap-2"
+              onClick={() => setShowFullHistory(!showFullHistory)}
+            >
+              <DollarSign className="h-5 w-5" />
+              <span className="font-medium">{showFullHistory ? 'Hide' : 'Show'} Donation History</span>
+              <span className="text-xs text-gray-500">Track all contributions</span>
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Full Donation History */}
+      {showFullHistory && (
+        <UnifiedDonationHistory
+          userId={user?.id}
+          donorEmail={user?.email}
+          showFilters={true}
+          pageSize={10}
+          className=""
+        />
+      )}
 
       {/* Account Management */}
       <Card>

@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_activity_log: {
@@ -64,6 +89,8 @@ export type Database = {
       campaigns: {
         Row: {
           accepts_anonymous_donations: boolean | null
+          accepts_cash_donations: boolean | null
+          accepts_physical_donations: boolean | null
           beneficiaries_count: number | null
           category: string
           completed_at: string | null
@@ -71,6 +98,7 @@ export type Database = {
           currency: string | null
           deadline_type: string | null
           description: string
+          donation_types_override: boolean | null
           end_date: string | null
           featured_image_url: string | null
           fund_usage_description: string | null
@@ -82,6 +110,8 @@ export type Database = {
           is_urgent: boolean | null
           minimum_donation: number | null
           organization_id: string | null
+          physical_donation_categories: string[] | null
+          physical_donation_instructions: string | null
           published_at: string | null
           raised_amount: number | null
           shares_count: number | null
@@ -101,6 +131,8 @@ export type Database = {
         }
         Insert: {
           accepts_anonymous_donations?: boolean | null
+          accepts_cash_donations?: boolean | null
+          accepts_physical_donations?: boolean | null
           beneficiaries_count?: number | null
           category: string
           completed_at?: string | null
@@ -108,6 +140,7 @@ export type Database = {
           currency?: string | null
           deadline_type?: string | null
           description: string
+          donation_types_override?: boolean | null
           end_date?: string | null
           featured_image_url?: string | null
           fund_usage_description?: string | null
@@ -119,6 +152,8 @@ export type Database = {
           is_urgent?: boolean | null
           minimum_donation?: number | null
           organization_id?: string | null
+          physical_donation_categories?: string[] | null
+          physical_donation_instructions?: string | null
           published_at?: string | null
           raised_amount?: number | null
           shares_count?: number | null
@@ -138,6 +173,8 @@ export type Database = {
         }
         Update: {
           accepts_anonymous_donations?: boolean | null
+          accepts_cash_donations?: boolean | null
+          accepts_physical_donations?: boolean | null
           beneficiaries_count?: number | null
           category?: string
           completed_at?: string | null
@@ -145,6 +182,7 @@ export type Database = {
           currency?: string | null
           deadline_type?: string | null
           description?: string
+          donation_types_override?: boolean | null
           end_date?: string | null
           featured_image_url?: string | null
           fund_usage_description?: string | null
@@ -156,6 +194,8 @@ export type Database = {
           is_urgent?: boolean | null
           minimum_donation?: number | null
           organization_id?: string | null
+          physical_donation_categories?: string[] | null
+          physical_donation_instructions?: string | null
           published_at?: string | null
           raised_amount?: number | null
           shares_count?: number | null
@@ -179,6 +219,80 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donation_items: {
+        Row: {
+          category: string
+          condition: string | null
+          created_at: string | null
+          decline_reason: string | null
+          description: string | null
+          estimated_value_per_unit: number | null
+          expiry_date: string | null
+          id: string
+          is_fragile: boolean | null
+          item_name: string
+          item_status: string | null
+          physical_donation_id: string
+          quantity: number
+          requires_refrigeration: boolean | null
+          special_handling_notes: string | null
+          subcategory: string | null
+          total_estimated_value: number | null
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          condition?: string | null
+          created_at?: string | null
+          decline_reason?: string | null
+          description?: string | null
+          estimated_value_per_unit?: number | null
+          expiry_date?: string | null
+          id?: string
+          is_fragile?: boolean | null
+          item_name: string
+          item_status?: string | null
+          physical_donation_id: string
+          quantity?: number
+          requires_refrigeration?: boolean | null
+          special_handling_notes?: string | null
+          subcategory?: string | null
+          total_estimated_value?: number | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          condition?: string | null
+          created_at?: string | null
+          decline_reason?: string | null
+          description?: string | null
+          estimated_value_per_unit?: number | null
+          expiry_date?: string | null
+          id?: string
+          is_fragile?: boolean | null
+          item_name?: string
+          item_status?: string | null
+          physical_donation_id?: string
+          quantity?: number
+          requires_refrigeration?: boolean | null
+          special_handling_notes?: string | null
+          subcategory?: string | null
+          total_estimated_value?: number | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donation_items_physical_donation_id_fkey"
+            columns: ["physical_donation_id"]
+            isOneToOne: false
+            referencedRelation: "physical_donations"
             referencedColumns: ["id"]
           },
         ]
@@ -320,7 +434,9 @@ export type Database = {
       }
       organizations: {
         Row: {
+          accepts_cash_donations: boolean | null
           accepts_direct_donations: boolean | null
+          accepts_physical_donations: boolean | null
           active_campaigns_count: number | null
           address: string | null
           banner_url: string | null
@@ -340,6 +456,10 @@ export type Database = {
           mission_statement: string | null
           name: string
           phone: string | null
+          physical_donation_categories: string[] | null
+          physical_donation_instructions: string | null
+          pickup_address: string | null
+          pickup_schedule: Json | null
           postal_code: string | null
           registration_number: string
           slug: string
@@ -356,7 +476,9 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          accepts_cash_donations?: boolean | null
           accepts_direct_donations?: boolean | null
+          accepts_physical_donations?: boolean | null
           active_campaigns_count?: number | null
           address?: string | null
           banner_url?: string | null
@@ -376,6 +498,10 @@ export type Database = {
           mission_statement?: string | null
           name: string
           phone?: string | null
+          physical_donation_categories?: string[] | null
+          physical_donation_instructions?: string | null
+          pickup_address?: string | null
+          pickup_schedule?: Json | null
           postal_code?: string | null
           registration_number: string
           slug: string
@@ -392,7 +518,9 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          accepts_cash_donations?: boolean | null
           accepts_direct_donations?: boolean | null
+          accepts_physical_donations?: boolean | null
           active_campaigns_count?: number | null
           address?: string | null
           banner_url?: string | null
@@ -412,6 +540,10 @@ export type Database = {
           mission_statement?: string | null
           name?: string
           phone?: string | null
+          physical_donation_categories?: string[] | null
+          physical_donation_instructions?: string | null
+          pickup_address?: string | null
+          pickup_schedule?: Json | null
           postal_code?: string | null
           registration_number?: string
           slug?: string
@@ -512,6 +644,112 @@ export type Database = {
         }
         Relationships: []
       }
+      physical_donations: {
+        Row: {
+          campaign_id: string | null
+          confirmed_at: string | null
+          coordinator_notes: string | null
+          created_at: string | null
+          currency: string | null
+          donation_status: string
+          donor_email: string
+          donor_name: string
+          donor_phone: string | null
+          estimated_value: number | null
+          id: string
+          is_anonymous: boolean | null
+          message: string | null
+          organization_id: string | null
+          pickup_address: string | null
+          pickup_instructions: string | null
+          pickup_preference: string
+          preferred_pickup_date: string | null
+          preferred_time_slot: string | null
+          received_at: string | null
+          target_id: string | null
+          target_name: string
+          target_type: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          confirmed_at?: string | null
+          coordinator_notes?: string | null
+          created_at?: string | null
+          currency?: string | null
+          donation_status?: string
+          donor_email: string
+          donor_name: string
+          donor_phone?: string | null
+          estimated_value?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          message?: string | null
+          organization_id?: string | null
+          pickup_address?: string | null
+          pickup_instructions?: string | null
+          pickup_preference?: string
+          preferred_pickup_date?: string | null
+          preferred_time_slot?: string | null
+          received_at?: string | null
+          target_id?: string | null
+          target_name: string
+          target_type: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          confirmed_at?: string | null
+          coordinator_notes?: string | null
+          created_at?: string | null
+          currency?: string | null
+          donation_status?: string
+          donor_email?: string
+          donor_name?: string
+          donor_phone?: string | null
+          estimated_value?: number | null
+          id?: string
+          is_anonymous?: boolean | null
+          message?: string | null
+          organization_id?: string | null
+          pickup_address?: string | null
+          pickup_instructions?: string | null
+          pickup_preference?: string
+          preferred_pickup_date?: string | null
+          preferred_time_slot?: string | null
+          received_at?: string | null
+          target_id?: string | null
+          target_name?: string
+          target_type?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "physical_donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physical_donations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physical_donations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           amount: number
@@ -594,7 +832,7 @@ export type Database = {
           profile_picture_url: string | null
           push_notifications: boolean | null
           registration_number: string | null
-          role: Database["public"]["Enums"]["user_role"] | null
+          role: string | null
           tax_id: string | null
           updated_at: string | null
           user_type: string
@@ -618,7 +856,7 @@ export type Database = {
           profile_picture_url?: string | null
           push_notifications?: boolean | null
           registration_number?: string | null
-          role?: Database["public"]["Enums"]["user_role"] | null
+          role?: string | null
           tax_id?: string | null
           updated_at?: string | null
           user_type: string
@@ -642,7 +880,7 @@ export type Database = {
           profile_picture_url?: string | null
           push_notifications?: boolean | null
           registration_number?: string | null
-          role?: Database["public"]["Enums"]["user_role"] | null
+          role?: string | null
           tax_id?: string | null
           updated_at?: string | null
           user_type?: string
@@ -657,43 +895,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      approve_organization: {
-        Args: { org_id: string }
-        Returns: undefined
-      }
       generate_receipt_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      is_admin: {
-        Args: { user_id?: string }
+      get_effective_donation_types: {
+        Args: { target_id: string; target_type: string }
+        Returns: Json
+      }
+      validate_donation_types: {
+        Args: { accepts_cash: boolean; accepts_physical: boolean }
         Returns: boolean
-      }
-      is_super_admin: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
-      log_admin_action: {
-        Args: {
-          p_action: string
-          p_new_values?: Json
-          p_old_values?: Json
-          p_target_id: string
-          p_target_type: string
-        }
-        Returns: undefined
-      }
-      reject_organization: {
-        Args: { org_id: string; rejection_reason?: string }
-        Returns: undefined
-      }
-      suspend_organization: {
-        Args: { org_id: string; suspension_reason?: string }
-        Returns: undefined
       }
     }
     Enums: {
-      user_role: "user" | "admin" | "super_admin"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -819,9 +1035,10 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
-    Enums: {
-      user_role: ["user", "admin", "super_admin"],
-    },
+    Enums: {},
   },
 } as const

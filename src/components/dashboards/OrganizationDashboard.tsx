@@ -19,11 +19,18 @@ import {
   AlertCircle,
   CheckCircle,
   Settings,
-  BarChart3
+  BarChart3,
+  Package,
+  Gift
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { userService, UserProfileWithOrganization } from '@/lib/userService';
 import { organizationService, OrganizationWithCampaigns } from '@/lib/organizationService';
+import { unifiedDonationService } from '@/lib/unifiedDonationService';
+import { physicalDonationService } from '@/lib/physicalDonationService';
+import UnifiedDonationHistory from '@/components/UnifiedDonationHistory';
+import OrganizationDonationSettings from '@/components/OrganizationDonationSettings';
+import { DonationStats } from '@/types/donations';
 
 const OrganizationDashboard: React.FC = () => {
   const { user, isEmailVerified } = useAuth();
@@ -35,6 +42,16 @@ const OrganizationDashboard: React.FC = () => {
     donationCount: 0,
     campaignCount: 0
   });
+  const [donationStats, setDonationStats] = useState<DonationStats>({
+    totalCashDonations: 0,
+    totalPhysicalDonations: 0,
+    totalCashAmount: 0,
+    totalEstimatedValue: 0,
+    donationsByMonth: [],
+    topCategories: []
+  });
+  const [showDonationHistory, setShowDonationHistory] = useState(false);
+  const [showDonationSettings, setShowDonationSettings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
 
@@ -65,15 +82,26 @@ const OrganizationDashboard: React.FC = () => {
           if (!profile.organization) {
             setNeedsSetup(true);
           } else {
-            setOrganization(profile.organization as OrganizationWithCampaigns);
+            // Load organization data
+            const orgResult = await organizationService.getOrganizationWithCampaigns(userProfile.organization_id!);
             
-            // Load organization statistics
-            const { totalRaised, donationCount, campaignCount } = await organizationService.getOrganizationDonationStats(profile.organization.id);
-            setOrganizationStats({
-              totalRaised,
-              donationCount,
-              campaignCount
-            });
+            if (!orgResult.error && orgResult.organization) {
+              setOrganization(orgResult.organization);
+              
+              // Calculate basic stats from campaigns
+              const campaigns = orgResult.organization.campaigns || [];
+              setOrganizationStats({
+                totalRaised: campaigns.reduce((sum, campaign) => sum + (campaign.raised_amount || 0), 0),
+                donationCount: campaigns.reduce((sum, campaign) => sum + (campaign.supporter_count || 0), 0),
+                campaignCount: campaigns.filter(c => c.status === 'active').length
+              });
+
+              // Load unified donation stats for organization
+              const unifiedStats = await unifiedDonationService.getDonationStats({ 
+                organizationId: userProfile.organization_id 
+              });
+              setDonationStats(unifiedStats);
+            }
           }
         }
       } catch (error) {
@@ -252,33 +280,93 @@ const OrganizationDashboard: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
               <DollarSign className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold text-green-900">{formatCurrency(organizationStats.totalRaised)}</p>
-                <p className="text-sm text-green-700">Total Raised</p>
+                <p className="text-2xl font-bold text-green-900">{formatCurrency(donationStats.totalCashAmount, 'PHP')}</p>
+                <p className="text-sm text-green-700">Cash Received</p>
+                <p className="text-xs text-green-600">{donationStats.totalCashDonations} donations</p>
               </div>
             </div>
             
             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-              <Heart className="h-8 w-8 text-blue-600" />
+              <Package className="h-8 w-8 text-blue-600" />
               <div>
-                <p className="text-2xl font-bold text-blue-900">{organizationStats.donationCount}</p>
-                <p className="text-sm text-blue-700">Total Donations</p>
+                <p className="text-2xl font-bold text-blue-900">{formatCurrency(donationStats.totalEstimatedValue, 'PHP')}</p>
+                <p className="text-sm text-blue-700">Physical Value</p>
+                <p className="text-xs text-blue-600">{donationStats.totalPhysicalDonations} donations</p>
               </div>
             </div>
             
             <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
-              <Target className="h-8 w-8 text-purple-600" />
+              <Heart className="h-8 w-8 text-purple-600" />
               <div>
-                <p className="text-2xl font-bold text-purple-900">{organizationStats.campaignCount}</p>
-                <p className="text-sm text-purple-700">Active Campaigns</p>
+                <p className="text-2xl font-bold text-purple-900">{donationStats.totalCashDonations + donationStats.totalPhysicalDonations}</p>
+                <p className="text-sm text-purple-700">Total Donations</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-lg">
+              <Gift className="h-8 w-8 text-orange-600" />
+              <div>
+                <p className="text-2xl font-bold text-orange-900">{formatCurrency(donationStats.totalCashAmount + donationStats.totalEstimatedValue, 'PHP')}</p>
+                <p className="text-sm text-orange-700">Total Impact</p>
               </div>
             </div>
           </div>
+
+          <div className="flex justify-center gap-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDonationHistory(!showDonationHistory)}
+              className="flex items-center gap-2"
+            >
+              <Heart className="h-4 w-4" />
+              {showDonationHistory ? 'Hide' : 'View'} Received Donations
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDonationSettings(!showDonationSettings)}
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Donation Settings
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Donation Settings */}
+      {showDonationSettings && organization && (
+        <OrganizationDonationSettings
+          organizationId={organization.id}
+          className=""
+        />
+      )}
+
+      {/* Received Donations */}
+      {showDonationHistory && organization && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5" />
+              Received Donations
+            </CardTitle>
+            <CardDescription>
+              All donations received by your organization
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UnifiedDonationHistory
+              organizationId={organization.id}
+              showFilters={true}
+              pageSize={15}
+              className=""
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Campaigns Management */}
       <Card>
@@ -375,21 +463,21 @@ const OrganizationDashboard: React.FC = () => {
             <Button 
               variant="outline" 
               className="w-full h-20 flex flex-col gap-2"
-              onClick={() => navigate('/view-donors')}
+              onClick={() => setShowDonationHistory(!showDonationHistory)}
             >
-              <Users className="h-5 w-5" />
-              <span className="font-medium">View Donors</span>
-              <span className="text-xs text-gray-500">See who supports you</span>
+              <Heart className="h-5 w-5" />
+              <span className="font-medium">{showDonationHistory ? 'Hide' : 'View'} Donations</span>
+              <span className="text-xs text-gray-500">Manage received donations</span>
             </Button>
             
             <Button 
               variant="outline" 
               className="w-full h-20 flex flex-col gap-2"
-              onClick={() => navigate('/organization-setup')}
+              onClick={() => setShowDonationSettings(!showDonationSettings)}
             >
               <Settings className="h-5 w-5" />
-              <span className="font-medium">Organization Settings</span>
-              <span className="text-xs text-gray-500">Manage your profile</span>
+              <span className="font-medium">Donation Settings</span>
+              <span className="text-xs text-gray-500">Configure donation types</span>
             </Button>
           </div>
         </CardContent>

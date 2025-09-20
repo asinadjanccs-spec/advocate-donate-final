@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth, RequireVerification, PublicRoute } from "@/components/auth/ProtectedRoute";
 import { RequireAdmin } from "@/components/auth/RequireAdmin";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { setupGlobalErrorHandling } from "@/lib/errorHandling";
 import Index from "./pages/Index";
 import Organizations from "./pages/Organizations";
 import Campaigns from "./pages/Campaigns";
@@ -54,14 +56,18 @@ import AdminActivity from "./pages/admin/AdminActivity";
 
 const queryClient = new QueryClient();
 
+// Setup global error handling
+setupGlobalErrorHandling();
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
+        <ErrorBoundary>
+          <BrowserRouter>
+            <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/organizations/:slug" element={<OrganizationDetail />} />
@@ -178,8 +184,9 @@ const App = () => (
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </ErrorBoundary>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
