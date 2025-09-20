@@ -17,8 +17,11 @@ import { donationService, DonationFormState, DonationContext } from "../lib/dona
 import { MockPaymentMethod } from "../lib/payment";
 import { PaymentMethodDB } from "../lib/paymentMethodService";
 import DonationConfirmation from "../components/DonationConfirmation";
+import DonationTypeSelector from '../components/DonationTypeSelector';
+import PhysicalDonationForm from '../components/PhysicalDonationForm';
 import { useAuth } from "@/contexts/AuthContext";
 import { organizationService, OrganizationWithCampaigns } from "@/lib/organizationService";
+import { DonationType, CreateDonationResponse } from '../types/donations';
 
 const DonateOrganization = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -29,7 +32,9 @@ const DonateOrganization = () => {
 
   const [selectedAmount, setSelectedAmount] = useState("");
   const [donationType, setDonationType] = useState("one-time");
+  const [selectedDonationType, setSelectedDonationType] = useState<DonationType>('cash');
   const [showDonationForm, setShowDonationForm] = useState(false);
+  const [showPhysicalForm, setShowPhysicalForm] = useState(false);
   const [formState, setFormState] = useState<DonationFormState>(donationService.initializeFormState());
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethodDB[]>([]);
   const [donationResult, setDonationResult] = useState<{ success: boolean; donationId?: string; error?: string } | null>(null);
@@ -138,9 +143,23 @@ const DonateOrganization = () => {
 
   const resetDonationFlow = () => {
     setShowDonationForm(false);
+    setShowPhysicalForm(false);
     setDonationResult(null);
     setFormState(donationService.initializeFormState());
     setSelectedAmount("");
+  };
+
+  const handleDonationTypeSelect = (type: DonationType) => {
+    setSelectedDonationType(type);
+  };
+
+  const handlePhysicalDonationSuccess = (result: CreateDonationResponse) => {
+    setDonationResult({
+      success: result.success,
+      donationId: result.donation?.id,
+      error: result.error
+    });
+    setShowPhysicalForm(false);
   };
 
   if (loading) {
@@ -222,20 +241,31 @@ const DonateOrganization = () => {
                 <CardTitle className="text-2xl text-center">Complete Your Donation</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex justify-center gap-4">
-                  <Button
-                    variant={donationType === "one-time" ? "default" : "outline"}
-                    onClick={() => setDonationType("one-time")}
-                  >
-                    One-Time
-                  </Button>
-                  <Button
-                    variant={donationType === "monthly" ? "default" : "outline"}
-                    onClick={() => setDonationType("monthly")}
-                  >
-                    Monthly
-                  </Button>
-                </div>
+                {/* Donation Type Selector */}
+                <DonationTypeSelector
+                  targetType="organization"
+                  targetId={org.id}
+                  targetName={org.name}
+                  selectedType={selectedDonationType}
+                  onTypeSelect={handleDonationTypeSelect}
+                />
+
+                {selectedDonationType === 'cash' && (
+                  <>
+                    <div className="flex justify-center gap-4">
+                      <Button
+                        variant={donationType === "one-time" ? "default" : "outline"}
+                        onClick={() => setDonationType("one-time")}
+                      >
+                        One-Time
+                      </Button>
+                      <Button
+                        variant={donationType === "monthly" ? "default" : "outline"}
+                        onClick={() => setDonationType("monthly")}
+                      >
+                        Monthly
+                      </Button>
+                    </div>
 
                 <div>
                   <h3 className="text-lg font-semibold text-center mb-4">Choose Amount</h3>
@@ -264,15 +294,28 @@ const DonateOrganization = () => {
                   </div>
                 </div>
 
-                <Button 
-                  className="w-full" 
-                  size="lg" 
-                  disabled={!selectedAmount}
-                  onClick={handleDonate}
-                >
-                  <Heart className="w-4 h-4 mr-2" />
-                  {donationType === "monthly" ? "Start Monthly Giving" : "Donate Now"}
-                </Button>
+                    <Button 
+                      className="w-full" 
+                      size="lg" 
+                      disabled={!selectedAmount}
+                      onClick={handleDonate}
+                    >
+                      <Heart className="w-4 h-4 mr-2" />
+                      {donationType === "monthly" ? "Start Monthly Giving" : "Donate Now"}
+                    </Button>
+                  </>
+                )}
+
+                {selectedDonationType === 'physical' && (
+                  <Button 
+                    className="w-full" 
+                    size="lg" 
+                    onClick={() => setShowPhysicalForm(true)}
+                  >
+                    <Heart className="w-4 h-4 mr-2" />
+                    Start Physical Donation
+                  </Button>
+                )}
 
                 {/* Donation Form Modal */}
                 {showDonationForm && (
@@ -460,6 +503,34 @@ const DonateOrganization = () => {
                             )}
                           </div>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Physical Donation Form Modal */}
+                {showPhysicalForm && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                      <div className="p-6">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xl font-semibold">Physical Donation to {org.name}</h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowPhysicalForm(false)}
+                          >
+                            ×
+                          </Button>
+                        </div>
+
+                        <PhysicalDonationForm
+                          targetType="organization"
+                          targetId={org.id}
+                          targetName={org.name}
+                          onSuccess={handlePhysicalDonationSuccess}
+                          onCancel={() => setShowPhysicalForm(false)}
+                        />
                       </div>
                     </div>
                   </div>
