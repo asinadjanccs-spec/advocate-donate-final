@@ -3,16 +3,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Shield, Calendar, Heart, DollarSign, TrendingUp, ArrowRight, CreditCard, Settings, Package } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Heart, DollarSign, TrendingUp, ArrowRight, CreditCard, Settings, Package, Trophy, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { donationService, DonationHistory } from '@/lib/donationService';
 import { unifiedDonationService } from '@/lib/unifiedDonationService';
 import { userService, UserProfile } from '@/lib/userService';
 import UnifiedDonationHistory from '@/components/UnifiedDonationHistory';
 import { DonationStats } from '@/types/donations';
+import { UserBadge } from '@/components/ui/UserBadge';
+import { useAchievement, useTierProgress, useAchievementStats } from '@/hooks/useGamification';
+import { useNavigate } from 'react-router-dom';
 
 const IndividualDashboard: React.FC = () => {
   const { user, isEmailVerified } = useAuth();
+  const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [recentDonations, setRecentDonations] = useState<DonationHistory[]>([]);
   const [donationStats, setDonationStats] = useState<DonationStats>({
@@ -25,6 +29,11 @@ const IndividualDashboard: React.FC = () => {
   });
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Gamification hooks
+  const { achievement, isLoading: achievementLoading } = useAchievement();
+  const { progress, isLoading: progressLoading } = useTierProgress();
+  const { stats: achievementStats, isLoading: statsLoading } = useAchievementStats();
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -71,6 +80,16 @@ const IndividualDashboard: React.FC = () => {
     loadDashboardData();
   }, [user?.id]);
 
+  // Smooth scroll to full history section when toggled on
+  useEffect(() => {
+    if (showFullHistory) {
+      const handle = window.setTimeout(() => {
+        document.getElementById('full-donation-history-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+      return () => window.clearTimeout(handle);
+    }
+  }, [showFullHistory]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -89,6 +108,77 @@ const IndividualDashboard: React.FC = () => {
           Hello {userProfile?.full_name || user?.email}, here's your donation activity and impact.
         </p>
       </div>
+
+      {/* Achievement Summary Card */}
+      <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-primary" />
+            Your Achievements
+          </CardTitle>
+          <CardDescription>
+            Track your donation impact and see how you're making a difference
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <UserBadge
+                tier={progress?.currentTier}
+                isLoading={achievementLoading || progressLoading}
+                size="lg"
+                clickable={false}
+                showLabel={true}
+              />
+              <div>
+                <p className="font-semibold text-lg">
+                  {progress?.currentTier?.tier_name ? 
+                    progress.currentTier.tier_name.replace('_', ' ').toUpperCase() : 
+                    'New Donor'
+                  } Tier
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {formatCurrency(achievementStats?.totalDonationAmount || 0)} donated across {achievementStats?.organizationsSupportedCount || 0} organizations
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => navigate('/achievements')}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Award className="h-4 w-4" />
+              View All Achievements
+            </Button>
+          </div>
+          
+          {progress?.nextTier && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Progress to {progress.nextTier.tier_name.replace('_', ' ').toUpperCase()}</span>
+                <span>{Math.round(progress.progressPercentage)}%</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(progress.progressPercentage, 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formatCurrency(progress.amountToNextTier || 0)} away from your next tier!
+              </p>
+            </div>
+          )}
+          
+          {!progress?.nextTier && achievement && (
+            <div className="text-center py-2">
+              <Trophy className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
+              <p className="font-semibold">You've reached the highest tier!</p>
+              <p className="text-sm text-muted-foreground">Thank you for your incredible generosity</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Profile Information Card */}
       <Card>
@@ -299,13 +389,15 @@ const IndividualDashboard: React.FC = () => {
 
       {/* Full Donation History */}
       {showFullHistory && (
-        <UnifiedDonationHistory
-          userId={user?.id}
-          donorEmail={user?.email}
-          showFilters={true}
-          pageSize={10}
-          className=""
-        />
+        <div id="full-donation-history-section">
+          <UnifiedDonationHistory
+            userId={user?.id}
+            donorEmail={user?.email}
+            showFilters={true}
+            pageSize={10}
+            className=""
+          />
+        </div>
       )}
 
       {/* Account Management */}

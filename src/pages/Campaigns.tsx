@@ -127,14 +127,16 @@ const Campaigns = () => {
 
   const sortedCampaigns = [...filteredCampaigns].sort((a, b) => {
     switch (sortBy) {
-      case 'Ending Soon':
+      case 'Ending Soon': {
         const daysLeftA = calculateDaysLeft(a.end_date) ?? Infinity;
         const daysLeftB = calculateDaysLeft(b.end_date) ?? Infinity;
         return daysLeftA - daysLeftB;
-      case 'Most Funded':
+      }
+      case 'Most Funded': {
         const percentA = (a.raised_amount / a.goal_amount) * 100;
         const percentB = (b.raised_amount / b.goal_amount) * 100;
         return percentB - percentA;
+      }
       case 'Most Supporters':
         return b.supporters_count - a.supporters_count;
       case 'Most Recent':

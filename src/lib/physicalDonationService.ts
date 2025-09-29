@@ -15,6 +15,7 @@ import {
   DonationValidationResult,
   DonationError
 } from '../types/donations';
+import { gamificationService } from '../services/gamificationService';
 
 /**
  * Service for managing physical donations and donation items
@@ -265,8 +266,22 @@ export class PhysicalDonationService {
     donationId: string,
     status: PhysicalDonationStatus,
     coordinatorNotes?: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; tierUpgrade?: any }> {
     try {
+      // Get the donation first to check user_id
+      const { data: donation, error: fetchError } = await supabase
+        .from('physical_donations')
+        .select('user_id, estimated_value')
+        .eq('id', donationId)
+        .single();
+
+      if (fetchError) {
+        return {
+          success: false,
+          error: fetchError.message
+        };
+      }
+
       const updateData: PhysicalDonationUpdate = {
         donation_status: status,
         coordinator_notes: coordinatorNotes
@@ -291,7 +306,35 @@ export class PhysicalDonationService {
         };
       }
 
-      return { success: true };
+      // Update achievements if status changed to confirmed or received and user exists
+      let tierUpgrade = undefined;
+      if ((status === 'confirmed' || status === 'received') && donation.user_id) {
+        try {
+          // Get achievement before update to compare tiers
+          const beforeAchievement = await gamificationService.getUserAchievement(donation.user_id);
+          const beforeTier = beforeAchievement?.current_tier;
+          
+          // Update achievements (database triggers handle the calculation)
+          const afterAchievement = await gamificationService.updateUserAchievement(donation.user_id);
+          const afterTier = afterAchievement?.current_tier;
+          
+          // Check if tier upgraded
+          if (beforeTier && afterTier && beforeTier !== afterTier) {
+            tierUpgrade = {
+              upgraded: true,
+              fromTier: beforeTier,
+              toTier: afterTier,
+              triggeringDonationId: donationId,
+              estimatedValue: donation.estimated_value
+            };
+          }
+        } catch (gamificationError) {
+          console.error('Error updating gamification achievements:', gamificationError);
+          // Don't fail the status update if gamification update fails
+        }
+      }
+
+      return { success: true, tierUpgrade };
     } catch (error) {
       return {
         success: false,

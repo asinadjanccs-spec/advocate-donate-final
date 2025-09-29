@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Heart, Search, User, LogOut, Settings } from "lucide-react";
+import { Menu, X, Heart, Search, User, LogOut, Settings, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { userService, UserProfile } from "@/lib/userService";
+import { UserBadge } from "@/components/ui/UserBadge";
+import { useAchievement, useTierProgress } from "@/hooks/useGamification";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +20,11 @@ const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const { user, isAuthenticated, signOut, loading } = useAuth();
+  const navigate = useNavigate();
+  
+  // Gamification hooks
+  const { achievement, isLoading: achievementLoading } = useAchievement();
+  const { progress, isLoading: progressLoading } = useTierProgress();
 
   const navItems = [
     { label: "Organizations", href: "/organizations" },
@@ -79,6 +86,19 @@ const Navigation = () => {
               </div>
             ) : isAuthenticated ? (
               <>
+                {/* User Achievement Badge */}
+                <UserBadge
+                  tier={progress?.currentTier}
+                  isLoading={achievementLoading || progressLoading}
+                  showProgress={true}
+                  progressPercentage={progress?.progressPercentage || 0}
+                  nextTierName={progress?.nextTier?.tier_name}
+                  amountToNextTier={progress?.amountToNextTier}
+                  totalDonationAmount={achievement?.total_donation_amount || 0}
+                  size="sm"
+                  onClick={() => navigate('/achievements')}
+                />
+                
                 <Button asChild variant="donate" size="sm">
                   <Link to="/donate">Donate Now</Link>
                 </Button>
@@ -112,6 +132,12 @@ const Navigation = () => {
                       <Link to="/donations" className="flex items-center gap-2">
                         <Heart className="w-4 h-4" />
                         My Donations
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/achievements" className="flex items-center gap-2">
+                        <Award className="w-4 h-4" />
+                        Achievements
                       </Link>
                     </DropdownMenuItem>
                     {userProfile?.user_type === 'nonprofit' && (
@@ -186,18 +212,43 @@ const Navigation = () => {
                 </div>
               ) : isAuthenticated ? (
                 <>
-                  <div className="px-2 py-1">
-                    <p className="text-sm font-medium">
-                      {user?.user_metadata?.fullName || 'User'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {user?.email}
-                    </p>
+                  <div className="px-2 py-1 space-y-2">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {user?.user_metadata?.fullName || 'User'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                    {/* Mobile Achievement Badge */}
+                    <div className="flex justify-center">
+                      <UserBadge
+                        tier={progress?.currentTier}
+                        isLoading={achievementLoading || progressLoading}
+                        showProgress={true}
+                        progressPercentage={progress?.progressPercentage || 0}
+                        nextTierName={progress?.nextTier?.tier_name}
+                        amountToNextTier={progress?.amountToNextTier}
+                        totalDonationAmount={achievement?.total_donation_amount || 0}
+                        size="md"
+                        onClick={() => {
+                          navigate('/achievements');
+                          setIsMenuOpen(false);
+                        }}
+                      />
+                    </div>
                   </div>
                   <Button asChild variant="outline" size="sm">
                     <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
                       <User className="w-4 h-4" />
                       Dashboard
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/achievements" onClick={() => setIsMenuOpen(false)}>
+                      <Award className="w-4 h-4" />
+                      Achievements
                     </Link>
                   </Button>
                   <Button asChild variant="outline" size="sm">

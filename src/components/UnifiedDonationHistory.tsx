@@ -27,6 +27,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { donationService } from '../lib/donationService';
+import { supabase } from '@/integrations/supabase/client';
+import type { Tables } from '@/integrations/supabase/types';
 import { physicalDonationService } from '../lib/physicalDonationService';
 import {
   UnifiedDonation,
@@ -35,7 +37,8 @@ import {
   DonationStats,
   DonationType,
   DonationStatus,
-  PhysicalDonationStatus
+  PhysicalDonationStatus,
+  PickupPreference
 } from '../types/donations';
 
 interface UnifiedDonationHistoryProps {
@@ -76,47 +79,129 @@ const UnifiedDonationHistory: React.FC<UnifiedDonationHistoryProps> = ({
     direction: 'desc'
   });
 
-  const loadDonations = useCallback(async (page = 1, resetList = false) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Load both cash and physical donations
-      const [cashDonations, physicalDonations] = await Promise.all([
-        loadCashDonations(page),
-        loadPhysicalDonations(page)
-      ]);
-
-      // Combine and sort donations
-      const allDonations = [...cashDonations, ...physicalDonations];
-      const sortedDonations = sortDonations(allDonations, sorting);
-      const filteredDonations = filterDonations(sortedDonations, filters);
-
-      if (resetList) {
-        setDonations(filteredDonations);
-      } else {
-        setDonations(prev => [...prev, ...filteredDonations]);
-      }
-
-      setHasMore(filteredDonations.length === pageSize);
-      calculateStats(allDonations);
-    } catch (err) {
-      setError('Failed to load donation history');
-      console.error('Error loading donations:', err);
-    } finally {
-      setLoading(false);
+  // Normalize target type from string to typed union
+  const mapTargetType = (value?: string): 'campaign' | 'organization' | 'general' => {
+    switch (value) {
+      case 'campaign':
+      case 'organization':
+        return value;
+      default:
+        return 'general';
     }
-  }, [filters, sorting, pageSize, userId, donorEmail, organizationId, campaignId]);
-
-  const loadCashDonations = async (page: number): Promise<UnifiedDonation[]> => {
-    // This would use the existing donation service
-    // For now, returning empty array as implementation depends on existing service
-    return [];
   };
 
-  const loadPhysicalDonations = async (page: number): Promise<UnifiedDonation[]> => {
+  // Load cash donations based on context
+  const loadCashDonations = useCallback(async (page: number): Promise<UnifiedDonation[]> => {
     try {
-      let physicalDonations = [];
+      const offset = (page - 1) * pageSize;
+
+      // Organization context: received donations (cash)
+      if (organizationId) {
+        const { donations, error } = await donationService.getOrganizationReceivedDonations(
+          organizationId,
+          pageSize,
+          offset
+        );
+        if (error) {
+          console.error('Error loading org cash donations:', error);
+          return [];
+        }
+        return (donations || []).map((d) => ({
+          id: d.id,
+          type: 'cash',
+          donorName: 'Donor',
+          donorEmail: '',
+          message: d.message,
+          targetType: mapTargetType(d.target_type as string),
+          targetId: d.target_id,
+          targetName: d.target_name,
+          createdAt: d.created_at,
+          status: d.payment_status as DonationStatus,
+          amount: d.amount,
+        }));
+      }
+
+      // Campaign context: donations to a specific campaign
+      if (campaignId) {
+        const { data, error } = await supabase
+          .from('donations')
+          .select('*')
+          .eq('payment_status', 'succeeded')
+          .eq('target_type', 'campaign')
+          .eq('target_id', campaignId)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+
+        if (error) {
+          console.error('Error loading campaign cash donations:', error);
+          return [];
+        }
+
+        const rows = (data || []) as Tables<'donations'>[];
+        return rows.map((d) => ({
+          id: d.id,
+          type: 'cash',
+          donorName: d.donor_name || d.donor_email || 'Donor',
+          donorEmail: d.donor_email || '',
+          message: d.message || undefined,
+          targetType: mapTargetType(d.target_type || undefined),
+          targetId: d.target_id || undefined,
+          targetName: d.target_name,
+          createdAt: d.created_at,
+          status: d.payment_status as DonationStatus,
+          amount: d.amount,
+        }));
+      }
+
+      // User/donor context: current user's donations
+      if (userId || donorEmail) {
+        const { donations, error } = await donationService.getUserDonations(pageSize, offset);
+        if (error) {
+          console.error('Error loading user cash donations:', error);
+          return [];
+        }
+        return (donations || []).map((d) => ({
+          id: d.id,
+          type: 'cash',
+          donorName: 'You',
+          donorEmail: '',
+          message: d.message,
+          targetType: mapTargetType(d.target_type),
+          targetId: d.target_id,
+          targetName: d.target_name,
+          createdAt: d.created_at,
+          status: d.payment_status as DonationStatus,
+          amount: d.amount,
+        }));
+      }
+
+      return [];
+    } catch (err) {
+      console.error('Error in loadCashDonations:', err);
+      return [];
+    }
+  }, [organizationId, campaignId, userId, donorEmail, pageSize]);
+
+  // Load physical donations based on context
+  type MinimalPhysicalDonation = {
+    id: string;
+    donor_name: string;
+    donor_email: string;
+    message?: string;
+    target_type: string;
+    target_id?: string;
+    target_name: string;
+    created_at?: string;
+    donation_status: string;
+    estimated_value?: number;
+    pickup_preference?: string;
+    donation_items?: Array<{ item_name: string; quantity: number; unit: string; condition: string; estimated_value_per_unit?: number }>;
+    coordinator_notes?: string;
+  };
+
+  const loadPhysicalDonations = useCallback(async (page: number): Promise<UnifiedDonation[]> => {
+    try {
+      let physicalDonations: MinimalPhysicalDonation[] = [];
 
       if (organizationId) {
         physicalDonations = await physicalDonationService.getDonationsForOrganization(
@@ -147,21 +232,53 @@ const UnifiedDonationHistory: React.FC<UnifiedDonationHistoryProps> = ({
         donorName: donation.donor_name,
         donorEmail: donation.donor_email,
         message: donation.message,
-        targetType: donation.target_type,
+        targetType: mapTargetType(donation.target_type),
         targetId: donation.target_id,
         targetName: donation.target_name,
         createdAt: donation.created_at || '',
         status: donation.donation_status as PhysicalDonationStatus,
         estimatedValue: donation.estimated_value,
-        pickupPreference: donation.pickup_preference,
-        donationItems: donation.donation_items || [],
+        pickupPreference: (donation.pickup_preference as PickupPreference | undefined),
+        // Omit donationItems to avoid type mismatch between service shape and DB Row type
         coordinatorNotes: donation.coordinator_notes
       }));
     } catch (error) {
       console.error('Error loading physical donations:', error);
       return [];
     }
-  };
+  }, [organizationId, campaignId, userId, donorEmail, pageSize]);
+
+  const loadDonations = useCallback(async (page = 1, resetList = false) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Load both cash and physical donations
+      const [cashDonations, physicalDonations] = await Promise.all([
+        loadCashDonations(page),
+        loadPhysicalDonations(page)
+      ]);
+
+      // Combine and sort donations
+      const allDonations = [...cashDonations, ...physicalDonations];
+      const sortedDonations = sortDonations(allDonations, sorting);
+      const filteredDonations = filterDonations(sortedDonations, filters);
+
+      if (resetList) {
+        setDonations(filteredDonations);
+      } else {
+        setDonations(prev => [...prev, ...filteredDonations]);
+      }
+
+      setHasMore(filteredDonations.length === pageSize);
+      calculateStats(allDonations);
+    } catch (err) {
+      setError('Failed to load donation history');
+      console.error('Error loading donations:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, sorting, pageSize, loadCashDonations, loadPhysicalDonations]);
 
   const sortDonations = (donations: UnifiedDonation[], sort: DonationHistorySort): UnifiedDonation[] => {
     return [...donations].sort((a, b) => {
@@ -244,7 +361,7 @@ const UnifiedDonationHistory: React.FC<UnifiedDonationHistoryProps> = ({
     });
   };
 
-  const handleFilterChange = (field: keyof DonationHistoryFilters, value: any) => {
+  const handleFilterChange = (field: keyof DonationHistoryFilters, value: string) => {
     setFilters(prev => ({
       ...prev,
       [field]: value

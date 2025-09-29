@@ -83,22 +83,22 @@ const OrganizationDashboard: React.FC = () => {
             setNeedsSetup(true);
           } else {
             // Load organization data
-            const orgResult = await organizationService.getOrganizationWithCampaigns(userProfile.organization_id!);
+            const { data: orgData, error: orgErr } = await organizationService.getCurrentUserOrganization();
             
-            if (!orgResult.error && orgResult.organization) {
-              setOrganization(orgResult.organization);
+            if (!orgErr && orgData) {
+              setOrganization(orgData);
               
               // Calculate basic stats from campaigns
-              const campaigns = orgResult.organization.campaigns || [];
+              const campaigns = orgData.campaigns || [];
               setOrganizationStats({
                 totalRaised: campaigns.reduce((sum, campaign) => sum + (campaign.raised_amount || 0), 0),
-                donationCount: campaigns.reduce((sum, campaign) => sum + (campaign.supporter_count || 0), 0),
+                donationCount: campaigns.reduce((sum, campaign) => sum + ((campaign as any).supporters_count || 0), 0),
                 campaignCount: campaigns.filter(c => c.status === 'active').length
               });
 
               // Load unified donation stats for organization
               const unifiedStats = await unifiedDonationService.getDonationStats({ 
-                organizationId: userProfile.organization_id 
+                organizationId: orgData.id 
               });
               setDonationStats(unifiedStats);
             }
@@ -113,6 +113,17 @@ const OrganizationDashboard: React.FC = () => {
 
     loadDashboardData();
   }, []);
+
+  // Smooth scroll to donations section when toggled on
+  useEffect(() => {
+    if (showDonationHistory) {
+      // Allow section to mount before scrolling
+      const handle = window.setTimeout(() => {
+        document.getElementById('received-donations-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+      return () => window.clearTimeout(handle);
+    }
+  }, [showDonationHistory]);
 
   if (loading) {
     return (
@@ -347,7 +358,7 @@ const OrganizationDashboard: React.FC = () => {
 
       {/* Received Donations */}
       {showDonationHistory && organization && (
-        <Card>
+        <Card id="received-donations-section">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Heart className="h-5 w-5" />

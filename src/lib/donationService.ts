@@ -3,6 +3,8 @@ import { paymentMethodService, type PaymentMethodDB } from './paymentMethodServi
 import { isAuthenticated, validateAndRefreshSession } from './auth';
 import { supabase } from '@/integrations/supabase/client';
 import type { TablesInsert } from '@/integrations/supabase/types';
+import { gamificationService } from '../services/gamificationService';
+import type { TierUpgrade } from '../types/gamification';
 
 // Donation form state interface
 export interface DonationFormState {
@@ -35,6 +37,13 @@ export interface DonationResult {
   donationId?: string;
   error?: string;
   paymentResult?: PaymentResult;
+  tierUpgrade?: {
+    upgraded: boolean;
+    fromTier?: string;
+    toTier?: string;
+    newBadgeColor?: string;
+    newBadgeIcon?: string;
+  };
 }
 
 // Donation history interface
@@ -311,10 +320,40 @@ class DonationService {
         }
       }
 
+      // Update user achievements and check for tier upgrades
+      let tierUpgrade = undefined;
+      if (session.user?.id) {
+        try {
+          // Get achievement before update to compare tiers
+          const beforeAchievement = await gamificationService.getUserAchievement(session.user.id);
+          const beforeTier = beforeAchievement?.current_tier;
+          
+          // Update achievements (database triggers handle the calculation)
+          const afterAchievement = await gamificationService.updateUserAchievement(session.user.id);
+          const afterTier = afterAchievement?.current_tier;
+          
+          // Check if tier upgraded
+          if (beforeTier && afterTier && beforeTier !== afterTier) {
+            const newTier = await gamificationService.getTierByName(afterTier);
+            tierUpgrade = {
+              upgraded: true,
+              fromTier: beforeTier,
+              toTier: afterTier,
+              newBadgeColor: newTier?.badge_color,
+              newBadgeIcon: newTier?.badge_icon
+            };
+          }
+        } catch (gamificationError) {
+          console.error('Error updating gamification achievements:', gamificationError);
+          // Don't fail the donation if gamification update fails
+        }
+      }
+
       return {
         success: true,
         donationId,
         paymentResult,
+        tierUpgrade,
       };
     } catch (error) {
       console.error('Error processing donation:', error);
