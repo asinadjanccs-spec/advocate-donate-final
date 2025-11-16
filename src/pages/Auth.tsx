@@ -84,21 +84,52 @@ const Auth = () => {
   
   // Redirect authenticated users
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      const redirectTo = searchParams.get('redirect') || '/';
-      navigate(redirectTo, { replace: true });
-    }
+    const handleRedirect = async () => {
+      if (!authLoading && isAuthenticated) {
+        const redirectTo = searchParams.get('redirect');
+        
+        if (redirectTo) {
+          navigate(redirectTo, { replace: true });
+        } else {
+          // Check if user is admin to determine default redirect
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('role')
+              .eq('id', user.id)
+              .single();
+            
+            const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+            navigate(isAdmin ? '/admin' : '/', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
+        }
+      }
+    };
+    
+    handleRedirect();
   }, [authLoading, isAuthenticated, navigate, searchParams]);
   
   // Handle authentication state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         toast({
           title: 'Welcome back!',
           description: 'You have been successfully signed in.',
         });
-        navigate('/');
+        
+        // Check if user is admin to determine redirect
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        
+        const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+        navigate(isAdmin ? '/admin' : '/');
       }
     });
     
@@ -206,7 +237,16 @@ const Auth = () => {
           title: 'Success!',
           description: 'You have been successfully signed in.',
         });
-        navigate('/');
+        
+        // Check if user is admin to determine redirect
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+        
+        const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+        navigate(isAdmin ? '/admin' : '/');
       }
     } catch (error) {
       console.error('Sign in error:', error);

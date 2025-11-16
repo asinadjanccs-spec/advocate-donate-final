@@ -106,7 +106,7 @@ const AdminDashboard = () => {
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-sm">BN</span>
                 </div>
-                <span className="font-semibold text-lg">Bridge Needs Admin</span>
+                <span className="font-semibold text-lg">Advocate&Donate Admin</span>
               </Link>
             </div>
             <div className="flex items-center space-x-4">
