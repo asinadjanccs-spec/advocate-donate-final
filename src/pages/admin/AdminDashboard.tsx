@@ -103,9 +103,11 @@ const AdminDashboard = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">BN</span>
-                </div>
+                <img
+                  src="/logo-transparent.png"
+                  alt="Advocate&Donate logo"
+                  className="w-8 h-8 rounded-lg object-contain"
+                />
                 <span className="font-semibold text-lg">Advocate&Donate Admin</span>
               </Link>
             </div>
