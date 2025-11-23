@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Building2, 
-  Mail, 
-  Shield, 
-  Calendar, 
-  Heart, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Building2,
+  Mail,
+  Shield,
+  Calendar,
+  Heart,
+  DollarSign,
+  TrendingUp,
   ArrowRight,
   Plus,
   Users,
@@ -21,7 +21,8 @@ import {
   Settings,
   BarChart3,
   Package,
-  Gift
+  Gift,
+  Camera
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { userService, UserProfileWithOrganization } from '@/lib/userService';
@@ -30,6 +31,8 @@ import { unifiedDonationService } from '@/lib/unifiedDonationService';
 import { physicalDonationService } from '@/lib/physicalDonationService';
 import UnifiedDonationHistory from '@/components/UnifiedDonationHistory';
 import OrganizationDonationSettings from '@/components/OrganizationDonationSettings';
+import { EvidenceUploadForm } from '@/components/evidence/EvidenceUploadForm';
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { DonationStats } from '@/types/donations';
 
 const OrganizationDashboard: React.FC = () => {
@@ -77,17 +80,17 @@ const OrganizationDashboard: React.FC = () => {
         const { data: profile } = await userService.getCurrentUserProfile();
         if (profile) {
           setUserProfile(profile);
-          
+
           // Check if organization setup is needed
           if (!profile.organization) {
             setNeedsSetup(true);
           } else {
             // Load organization data
             const { data: orgData, error: orgErr } = await organizationService.getCurrentUserOrganization();
-            
+
             if (!orgErr && orgData) {
               setOrganization(orgData);
-              
+
               // Calculate basic stats from campaigns
               const campaigns = orgData.campaigns || [];
               setOrganizationStats({
@@ -97,8 +100,8 @@ const OrganizationDashboard: React.FC = () => {
               });
 
               // Load unified donation stats for organization
-              const unifiedStats = await unifiedDonationService.getDonationStats({ 
-                organizationId: orgData.id 
+              const unifiedStats = await unifiedDonationService.getDonationStats({
+                organizationId: orgData.id
               });
               setDonationStats(unifiedStats);
             }
@@ -175,7 +178,7 @@ const OrganizationDashboard: React.FC = () => {
                   Start Setup
                 </Button>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg opacity-75">
                 <Shield className="h-5 w-5 text-gray-500" />
                 <div className="flex-1">
@@ -184,7 +187,7 @@ const OrganizationDashboard: React.FC = () => {
                 </div>
                 <Badge variant="outline">Pending</Badge>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg opacity-75">
                 <Target className="h-5 w-5 text-gray-500" />
                 <div className="flex-1">
@@ -251,7 +254,7 @@ const OrganizationDashboard: React.FC = () => {
                 </Badge>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Mail className="h-4 w-4 text-gray-500" />
               <div>
@@ -259,7 +262,7 @@ const OrganizationDashboard: React.FC = () => {
                 <p className="text-sm text-gray-600">Organization Email</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Target className="h-4 w-4 text-gray-500" />
               <div>
@@ -267,7 +270,7 @@ const OrganizationDashboard: React.FC = () => {
                 <p className="text-sm text-gray-600">Category</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Calendar className="h-4 w-4 text-gray-500" />
               <div>
@@ -300,7 +303,7 @@ const OrganizationDashboard: React.FC = () => {
                 <p className="text-xs text-green-600">{donationStats.totalCashDonations} donations</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
               <Package className="h-8 w-8 text-blue-600" />
               <div>
@@ -309,7 +312,7 @@ const OrganizationDashboard: React.FC = () => {
                 <p className="text-xs text-blue-600">{donationStats.totalPhysicalDonations} donations</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
               <Heart className="h-8 w-8 text-purple-600" />
               <div>
@@ -317,7 +320,7 @@ const OrganizationDashboard: React.FC = () => {
                 <p className="text-sm text-purple-700">Total Donations</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-lg">
               <Gift className="h-8 w-8 text-orange-600" />
               <div>
@@ -328,16 +331,16 @@ const OrganizationDashboard: React.FC = () => {
           </div>
 
           <div className="flex justify-center gap-2 mt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowDonationHistory(!showDonationHistory)}
               className="flex items-center gap-2"
             >
               <Heart className="h-4 w-4" />
               {showDonationHistory ? 'Hide' : 'View'} Received Donations
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowDonationSettings(!showDonationSettings)}
               className="flex items-center gap-2"
             >
@@ -425,9 +428,29 @@ const OrganizationDashboard: React.FC = () => {
                       {Math.round((campaign.raised_amount / campaign.goal_amount) * 100)}% funded
                     </p>
                   </div>
+                  <div className="ml-4">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex items-center gap-1">
+                          <Camera className="w-3 h-3" />
+                          Add Evidence
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <EvidenceUploadForm
+                          targetType="campaign"
+                          targetId={campaign.slug}
+                          onSuccess={() => {
+                            // Optional: refresh data or show success message
+                            // The form handles its own toast
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
               ))}
-              
+
               <div className="flex justify-center pt-4">
                 <Link to="/campaigns">
                   <Button variant="outline" className="flex items-center gap-2">
@@ -470,9 +493,9 @@ const OrganizationDashboard: React.FC = () => {
                 <span className="text-xs text-gray-500">Start a new fundraiser</span>
               </Button>
             </Link>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="w-full h-20 flex flex-col gap-2"
               onClick={() => setShowDonationHistory(!showDonationHistory)}
             >
@@ -480,10 +503,10 @@ const OrganizationDashboard: React.FC = () => {
               <span className="font-medium">{showDonationHistory ? 'Hide' : 'View'} Donations</span>
               <span className="text-xs text-gray-500">Manage received donations</span>
             </Button>
-            
+
             <Link to="/organization-donation-preferences">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full h-20 flex flex-col gap-2"
               >
                 <Settings className="h-5 w-5" />
@@ -491,10 +514,31 @@ const OrganizationDashboard: React.FC = () => {
                 <span className="text-xs text-gray-500">Configure donation types</span>
               </Button>
             </Link>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full h-20 flex flex-col gap-2"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span className="font-medium">Submit Org Evidence</span>
+                  <span className="text-xs text-gray-500">Post general impact photos</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                {organization && (
+                  <EvidenceUploadForm
+                    targetType="organization"
+                    targetId={organization.slug || organization.id}
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 };
 

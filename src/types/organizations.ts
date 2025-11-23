@@ -33,6 +33,21 @@ export interface CampaignWithDonationTypes extends Campaign {
     estimated_value_received: number;
     progress_percentage: number;
   };
+  impact_evidence?: ImpactEvidence[];
+}
+
+export interface ImpactEvidence {
+  id: string;
+  target_type: 'campaign' | 'organization';
+  target_id: string;
+  title: string;
+  description: string;
+  media_urls: string[];
+  submitted_at: string;
+  status: 'submitted' | 'approved' | 'rejected';
+  created_by: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Organization settings for donation types
@@ -123,18 +138,18 @@ export interface CampaignDonationSettingsResponse {
 }
 
 // Organization verification status
-export type OrganizationVerificationStatus = 
-  | 'pending' 
-  | 'verified' 
-  | 'rejected' 
+export type OrganizationVerificationStatus =
+  | 'pending'
+  | 'verified'
+  | 'rejected'
   | 'suspended';
 
 // Campaign status
-export type CampaignStatus = 
-  | 'draft' 
-  | 'active' 
-  | 'paused' 
-  | 'completed' 
+export type CampaignStatus =
+  | 'draft'
+  | 'active'
+  | 'paused'
+  | 'completed'
   | 'cancelled';
 
 // User types

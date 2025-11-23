@@ -9,6 +9,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { campaignService, type CampaignWithOrganization } from "@/lib/campaignService";
 import campaignImage from "@/assets/food-donations.jpg";
+import { EvidenceGallery } from "@/components/evidence/EvidenceGallery";
 
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,19 +21,19 @@ const CampaignDetail = () => {
   useEffect(() => {
     const fetchCampaign = async () => {
       if (!id) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       const { data, error: fetchError } = await campaignService.getCampaignBySlug(id);
-      
+
       if (fetchError) {
         setError(fetchError);
         setCampaign(null);
       } else {
         setCampaign(data);
       }
-      
+
       setLoading(false);
     };
 
@@ -120,6 +121,12 @@ const CampaignDetail = () => {
               </div>
 
               <p className="mt-4 text-muted-foreground">{campaign.description}</p>
+
+              {/* Impact Evidence Section */}
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold mb-4">Impact Evidence</h2>
+                <EvidenceGallery targetType="campaign" targetId={campaign.slug} />
+              </div>
 
               <div className="mt-6">
                 <div className="flex justify-between text-sm mb-2">
