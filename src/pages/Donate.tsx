@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Heart, Search, Filter, MapPin, Calendar, Target, CreditCard, CheckCircle, AlertCircle, Loader2, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { donationService, DonationFormState, DonationContext } from "@/lib/donationService";
-import { MockPaymentMethod } from "@/lib/payment";
+import { PaymentMethodDB } from "@/lib/paymentMethodService";
 import DonationConfirmation from "@/components/DonationConfirmation";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -23,16 +23,35 @@ const Donate = () => {
   const [donationType, setDonationType] = useState("one-time");
   const [showDonationForm, setShowDonationForm] = useState(false);
   const [formState, setFormState] = useState<DonationFormState>(donationService.initializeFormState());
-  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<MockPaymentMethod[]>([]);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState<PaymentMethodDB[]>([]);
   const [donationResult, setDonationResult] = useState<{ success: boolean; donationId?: string; error?: string } | null>(null);
   const [selectedCause, setSelectedCause] = useState("");
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
+  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
-    setAvailablePaymentMethods(donationService.getAvailablePaymentMethods());
     initializeFormWithAuth();
+    loadPaymentMethods();
   }, []);
+
+  const loadPaymentMethods = async () => {
+    setIsLoadingPaymentMethods(true);
+    try {
+      const result = await donationService.getAvailablePaymentMethods();
+      if (result.error) {
+        console.error('Error loading payment methods:', result.error);
+        toast.error('Failed to load payment methods. Please try refreshing the page.');
+      } else {
+        setAvailablePaymentMethods(result.methods || []);
+      }
+    } catch (error) {
+      console.error('Error loading payment methods:', error);
+      toast.error('Failed to load payment methods. Please try refreshing the page.');
+    } finally {
+      setIsLoadingPaymentMethods(false);
+    }
+  };
 
   const initializeFormWithAuth = async () => {
     setIsLoadingUserData(true);
@@ -61,7 +80,7 @@ const Donate = () => {
     }
   };
 
-  const handleFormChange = (field: keyof DonationFormState, value: string | number | boolean | MockPaymentMethod) => {
+  const handleFormChange = (field: keyof DonationFormState, value: string | number | boolean | PaymentMethodDB) => {
     setFormState(prev => ({
       ...prev,
       [field]: value,
@@ -72,7 +91,7 @@ const Donate = () => {
     }));
   };
 
-  const handlePaymentMethodSelect = (paymentMethod: MockPaymentMethod) => {
+  const handlePaymentMethodSelect = (paymentMethod: PaymentMethodDB) => {
     setFormState(prev => ({
       ...prev,
       selectedPaymentMethod: paymentMethod
@@ -81,14 +100,14 @@ const Donate = () => {
 
   const handleSubmitDonation = async () => {
     setFormState(prev => ({ ...prev, isProcessing: true }));
-    
+
     try {
       const context: DonationContext = {
         campaignTitle: selectedCause === "most-urgent" ? "Most Urgent Causes" : selectedCause
       };
-      
+
       const result = await donationService.processDonation(formState, context);
-      
+
       if (result.success) {
         setDonationResult({
           success: true,
@@ -114,7 +133,7 @@ const Donate = () => {
     } catch (error) {
       console.error('Donation submission error:', error);
       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred. Please try again.";
-      
+
       // Check if it's a session-related error
       if (errorMessage.includes('session') || errorMessage.includes('expired') || errorMessage.includes('authentication')) {
         toast.error("Your session has expired. Please refresh the page and sign in again.");
@@ -141,7 +160,7 @@ const Donate = () => {
     setSelectedAmount("");
     setSelectedCause("");
   };
-  
+
   const urgentCampaigns = [
     {
       id: 1,
@@ -184,7 +203,7 @@ const Donate = () => {
   const categories = [
     "All Categories",
     "Disaster Relief",
-    "Education", 
+    "Education",
     "Healthcare",
     "Food Security",
     "Clean Water",
@@ -197,7 +216,7 @@ const Donate = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <main className="pt-20">
         {/* Hero Section */}
         <section className="py-20 px-4 bg-gradient-hero text-white">
@@ -222,13 +241,13 @@ const Donate = () => {
               <CardContent className="space-y-6">
                 {/* Donation Type */}
                 <div className="flex justify-center gap-4">
-                  <Button 
+                  <Button
                     variant={donationType === "one-time" ? "default" : "outline"}
                     onClick={() => setDonationType("one-time")}
                   >
                     One-Time
                   </Button>
-                  <Button 
+                  <Button
                     variant={donationType === "monthly" ? "default" : "outline"}
                     onClick={() => setDonationType("monthly")}
                   >
@@ -253,7 +272,7 @@ const Donate = () => {
                   </div>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₱</span>
-                    <Input 
+                    <Input
                       placeholder="Custom amount"
                       value={selectedAmount}
                       onChange={(e) => setSelectedAmount(e.target.value)}
@@ -281,9 +300,9 @@ const Donate = () => {
                   </Select>
                 </div>
 
-                <Button 
-                  className="w-full" 
-                  size="lg" 
+                <Button
+                  className="w-full"
+                  size="lg"
                   disabled={!selectedAmount || !selectedCause}
                   onClick={handleQuickDonate}
                 >
@@ -382,30 +401,44 @@ const Donate = () => {
                               </div>
                             </div>
 
+
                             {/* Payment Methods */}
                             <div>
                               <Label>Payment Method *</Label>
-                              <div className="grid grid-cols-1 gap-2 mt-2">
-                                {availablePaymentMethods.map((method) => (
-                                  <div
-                                    key={method.id}
-                                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                      formState.selectedPaymentMethod?.id === method.id
+                              {isLoadingPaymentMethods ? (
+                                <div className="flex items-center justify-center gap-2 p-4 mt-2 border rounded-lg">
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span className="text-sm text-muted-foreground">Loading payment methods...</span>
+                                </div>
+                              ) : availablePaymentMethods.length === 0 ? (
+                                <div className="p-4 mt-2 border rounded-lg bg-muted/50">
+                                  <p className="text-sm text-muted-foreground mb-2">No payment methods found.</p>
+                                  <Link to="/dashboard/payment-methods" className="text-sm text-blue-600 hover:underline">
+                                    Add a payment method →
+                                  </Link>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                  {availablePaymentMethods.map((method) => (
+                                    <div
+                                      key={method.id}
+                                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${formState.selectedPaymentMethod?.id === method.id
                                         ? 'border-blue-500 bg-blue-50'
                                         : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                    onClick={() => handlePaymentMethodSelect(method)}
-                                  >
-                                    <div className="flex items-center space-x-3">
-                                      <CreditCard className="w-5 h-5" />
-                                      <div>
-                                        <p className="font-medium">{method.type.toUpperCase()}</p>
-                                        <p className="text-sm text-gray-600">**** **** **** {method.card.last4}</p>
+                                        }`}
+                                      onClick={() => handlePaymentMethodSelect(method)}
+                                    >
+                                      <div className="flex items-center space-x-3">
+                                        <CreditCard className="w-5 h-5" />
+                                        <div>
+                                          <p className="font-medium">{method.card_brand?.toUpperCase() || method.type.toUpperCase()}</p>
+                                          <p className="text-sm text-gray-600">**** **** **** {method.card_last4 || '****'}</p>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
+                                  ))}
+                                </div>
+                              )}
                               {formState.errors.selectedPaymentMethod && (
                                 <p className="text-red-500 text-sm mt-1">{formState.errors.selectedPaymentMethod}</p>
                               )}
@@ -479,7 +512,7 @@ const Donate = () => {
             <div className="flex flex-wrap gap-4 mb-8">
               <div className="relative flex-1 min-w-[300px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
+                <Input
                   placeholder="Search campaigns, organizations, or causes..."
                   className="pl-10"
                 />
@@ -518,8 +551,8 @@ const Donate = () => {
               {urgentCampaigns.map((campaign) => (
                 <Card key={campaign.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="relative">
-                    <img 
-                      src={campaign.image} 
+                    <img
+                      src={campaign.image}
                       alt={campaign.title}
                       className="w-full h-48 object-cover"
                     />
@@ -537,15 +570,15 @@ const Donate = () => {
                         {campaign.location}
                       </div>
                     </div>
-                    
+
                     <h3 className="text-lg font-semibold text-foreground mb-2">
                       {campaign.title}
                     </h3>
-                    
+
                     <p className="text-primary font-medium text-sm mb-4">
                       {campaign.organization}
                     </p>
-                    
+
                     {/* Progress */}
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-1">
@@ -557,8 +590,8 @@ const Donate = () => {
                         </span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
-                        <div 
-                          className="bg-success h-2 rounded-full" 
+                        <div
+                          className="bg-success h-2 rounded-full"
                           style={{ width: `${Math.min((campaign.raised / campaign.goal) * 100, 100)}%` }}
                         ></div>
                       </div>
@@ -573,7 +606,7 @@ const Donate = () => {
                         </span>
                       </div>
                     </div>
-                    
+
                     <Link to={`/campaigns/${campaign.id}/donate`} className="block">
                       <Button className="w-full" variant="default">Donate Now</Button>
                     </Link>
