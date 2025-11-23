@@ -36,7 +36,7 @@ class GamificationService implements GamificationServiceInterface {
         throw error;
       }
 
-      return data;
+      return data as unknown as UserAchievementWithTier;
     } catch (error) {
       console.error('Error fetching user achievement:', error);
       throw this.createGamificationError('USER_NOT_FOUND', 'Failed to fetch user achievement');
@@ -84,7 +84,7 @@ class GamificationService implements GamificationServiceInterface {
       // The database triggers will handle the actual calculation
       // We just need to fetch the updated data
       const achievement = await this.getUserAchievement(userId);
-      
+
       if (!achievement) {
         throw this.createGamificationError('USER_NOT_FOUND', 'User achievement not found');
       }
@@ -107,7 +107,7 @@ class GamificationService implements GamificationServiceInterface {
         .order('tier_order', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as unknown as GamificationTier[];
     } catch (error) {
       console.error('Error fetching tiers:', error);
       throw this.createGamificationError('TIER_NOT_FOUND', 'Failed to fetch tiers');
@@ -126,7 +126,7 @@ class GamificationService implements GamificationServiceInterface {
         .order('tier_order', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as unknown as GamificationTier[];
     } catch (error) {
       console.error('Error fetching active tiers:', error);
       throw this.createGamificationError('TIER_NOT_FOUND', 'Failed to fetch active tiers');
@@ -145,7 +145,7 @@ class GamificationService implements GamificationServiceInterface {
 
       const tierName = data as TierName;
       const tier = await this.getTierByName(tierName);
-      
+
       if (!tier) {
         throw this.createGamificationError('TIER_NOT_FOUND', `Tier ${tierName} not found`);
       }
@@ -160,7 +160,7 @@ class GamificationService implements GamificationServiceInterface {
   /**
    * Get tier by name
    */
-  private async getTierByName(tierName: TierName): Promise<GamificationTier | null> {
+  public async getTierByName(tierName: TierName): Promise<GamificationTier | null> {
     try {
       const { data, error } = await supabase
         .from('gamification_tiers')
@@ -173,7 +173,7 @@ class GamificationService implements GamificationServiceInterface {
         throw error;
       }
 
-      return data;
+      return data as unknown as GamificationTier;
     } catch (error) {
       console.error('Error fetching tier by name:', error);
       return null;
@@ -186,7 +186,7 @@ class GamificationService implements GamificationServiceInterface {
   async getTierProgress(userId: string): Promise<TierProgress> {
     try {
       const achievement = await this.getUserAchievement(userId);
-      
+
       if (!achievement) {
         throw this.createGamificationError('USER_NOT_FOUND', 'User achievement not found');
       }
@@ -218,8 +218,8 @@ class GamificationService implements GamificationServiceInterface {
       } : undefined;
 
       const progressAmount = achievement.total_donation_amount - achievement.tier_minimum_amount;
-      const amountToNextTier = nextTier 
-        ? nextTier.minimum_amount - achievement.total_donation_amount 
+      const amountToNextTier = nextTier
+        ? nextTier.minimum_amount - achievement.total_donation_amount
         : undefined;
 
       return {
@@ -241,22 +241,22 @@ class GamificationService implements GamificationServiceInterface {
   async getAchievementStats(userId: string): Promise<AchievementStats> {
     try {
       const achievement = await this.getUserAchievement(userId);
-      
+
       if (!achievement) {
         throw this.createGamificationError('USER_NOT_FOUND', 'User achievement not found');
       }
 
-      const tierUpgradeHistory = Array.isArray(achievement.tier_upgrade_history) 
-        ? achievement.tier_upgrade_history 
+      const tierUpgradeHistory = Array.isArray(achievement.tier_upgrade_history)
+        ? achievement.tier_upgrade_history
         : [];
 
       const firstDonationDate = achievement.first_donation_date;
-      const daysSinceFirstDonation = firstDonationDate 
+      const daysSinceFirstDonation = firstDonationDate
         ? Math.floor((new Date().getTime() - new Date(firstDonationDate).getTime()) / (1000 * 60 * 60 * 24))
         : undefined;
 
-      const averageDonationAmount = achievement.total_donations_count > 0 
-        ? achievement.total_donation_amount / achievement.total_donations_count 
+      const averageDonationAmount = achievement.total_donations_count > 0
+        ? achievement.total_donation_amount / achievement.total_donations_count
         : undefined;
 
       return {
@@ -283,8 +283,8 @@ class GamificationService implements GamificationServiceInterface {
     try {
       const { error } = await supabase
         .from('user_achievements')
-        .update({ 
-          privacy_settings: settings,
+        .update({
+          privacy_settings: settings as unknown as any,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', userId);
@@ -329,7 +329,7 @@ class GamificationService implements GamificationServiceInterface {
         throw error;
       }
 
-      return data.privacy_settings as AchievementPrivacySettings;
+      return data.privacy_settings as unknown as AchievementPrivacySettings;
     } catch (error) {
       console.error('Error getting privacy settings:', error);
       throw this.createGamificationError('PRIVACY_ERROR', 'Failed to get privacy settings');
@@ -361,17 +361,17 @@ class GamificationService implements GamificationServiceInterface {
   async getPublicBadgeInfo(userId: string): Promise<{ tier: GamificationTier; showBadge: boolean } | null> {
     try {
       const achievement = await this.getUserAchievement(userId);
-      
+
       if (!achievement) return null;
 
       const privacySettings = achievement.privacy_settings as AchievementPrivacySettings;
-      
+
       if (!privacySettings.showPublicBadge) {
         return null;
       }
 
       const tier = await this.getTierByName(achievement.current_tier);
-      
+
       if (!tier) return null;
 
       return {
@@ -390,7 +390,7 @@ class GamificationService implements GamificationServiceInterface {
   async hasRecentTierUpgrade(userId: string, hoursAgo: number = 24): Promise<boolean> {
     try {
       const achievement = await this.getUserAchievement(userId);
-      
+
       if (!achievement || !achievement.last_tier_upgrade_date) return false;
 
       const upgradeDate = new Date(achievement.last_tier_upgrade_date);
@@ -458,9 +458,9 @@ export const gamificationAPI = {
       const achievement = await gamificationService.getUserAchievement(userId);
       return { success: true, achievement: achievement || undefined };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   },
@@ -470,9 +470,9 @@ export const gamificationAPI = {
       const achievement = await gamificationService.updateUserAchievement(userId);
       return { success: true, achievement };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   },
@@ -482,9 +482,9 @@ export const gamificationAPI = {
       const progress = await gamificationService.getTierProgress(userId);
       return { success: true, progress };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   },
@@ -494,9 +494,9 @@ export const gamificationAPI = {
       const stats = await gamificationService.getAchievementStats(userId);
       return { success: true, stats };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   },
@@ -507,9 +507,9 @@ export const gamificationAPI = {
       const updatedSettings = await gamificationService.getPrivacySettings(userId);
       return { success: true, settings: updatedSettings };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }

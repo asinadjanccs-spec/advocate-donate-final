@@ -14,7 +14,7 @@ import { Heart, ArrowLeft, MapPin, Verified, CreditCard, CheckCircle, AlertCircl
 import { Link, useNavigate, useParams } from "react-router-dom";
 import organizationImage from "@/assets/organization-relief.jpg";
 import { donationService, DonationFormState, DonationContext } from "../lib/donationService";
-import { MockPaymentMethod } from "../lib/payment";
+
 import { PaymentMethodDB } from "../lib/paymentMethodService";
 import DonationConfirmation from "../components/DonationConfirmation";
 import DonationTypeSelector from '../components/DonationTypeSelector';
@@ -50,7 +50,7 @@ const DonateOrganization = () => {
 
     try {
       const { data, error: fetchError } = await organizationService.getOrganizationBySlug(slug);
-      
+
       if (fetchError) {
         setError(fetchError);
       } else if (!data) {
@@ -70,7 +70,7 @@ const DonateOrganization = () => {
       const { methods } = await donationService.getAvailablePaymentMethods();
       setAvailablePaymentMethods(methods);
     };
-    
+
     loadPaymentMethods();
     initializeFormWithAuth();
     loadOrganization();
@@ -210,10 +210,10 @@ const DonateOrganization = () => {
               <ArrowLeft className="w-4 h-4 mr-2" /> Back
             </Button>
             <div className="flex items-center gap-4">
-              <img 
-                src={org.banner_url || org.logo_url || organizationImage} 
-                alt={org.name} 
-                className="w-16 h-16 rounded-md object-cover" 
+              <img
+                src={org.banner_url || org.logo_url || organizationImage}
+                alt={org.name}
+                className="w-16 h-16 rounded-md object-cover"
               />
               <div>
                 <div className="flex items-center gap-2">
@@ -226,7 +226,7 @@ const DonateOrganization = () => {
                   <Badge variant="outline" className="bg-white/90 text-foreground">{org.category}</Badge>
                 </div>
                 <div className="text-sm text-muted-foreground flex items-center mt-1">
-                  <MapPin className="w-3 h-3 mr-1" /> 
+                  <MapPin className="w-3 h-3 mr-1" />
                   {[org.city, org.state, org.country].filter(Boolean).join(', ') || 'Location not specified'}
                 </div>
               </div>
@@ -267,36 +267,36 @@ const DonateOrganization = () => {
                       </Button>
                     </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold text-center mb-4">Choose Amount</h3>
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    {suggestedAmounts.map((amount) => (
-                      <Button
-                        key={amount}
-                        variant={selectedAmount === amount.toString() ? "default" : "outline"}
-                        onClick={() => setSelectedAmount(amount.toString())}
-                        className="h-12"
-                      >
-                        ₱{amount}
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₱</span>
-                    <Input
-                      placeholder="Custom amount"
-                      value={selectedAmount}
-                      onChange={(e) => setSelectedAmount(e.target.value)}
-                      className="pl-8"
-                      type="number"
-                      min={1}
-                    />
-                  </div>
-                </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-center mb-4">Choose Amount</h3>
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        {suggestedAmounts.map((amount) => (
+                          <Button
+                            key={amount}
+                            variant={selectedAmount === amount.toString() ? "default" : "outline"}
+                            onClick={() => setSelectedAmount(amount.toString())}
+                            className="h-12"
+                          >
+                            ₱{amount}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₱</span>
+                        <Input
+                          placeholder="Custom amount"
+                          value={selectedAmount}
+                          onChange={(e) => setSelectedAmount(e.target.value)}
+                          className="pl-8"
+                          type="number"
+                          min={1}
+                        />
+                      </div>
+                    </div>
 
-                    <Button 
-                      className="w-full" 
-                      size="lg" 
+                    <Button
+                      className="w-full"
+                      size="lg"
                       disabled={!selectedAmount}
                       onClick={handleDonate}
                     >
@@ -307,9 +307,9 @@ const DonateOrganization = () => {
                 )}
 
                 {selectedDonationType === 'physical' && (
-                  <Button 
-                    className="w-full" 
-                    size="lg" 
+                  <Button
+                    className="w-full"
+                    size="lg"
                     onClick={() => setShowPhysicalForm(true)}
                   >
                     <Heart className="w-4 h-4 mr-2" />
@@ -423,15 +423,14 @@ const DonateOrganization = () => {
                                 {availablePaymentMethods.map((method) => {
                                   const isDigitalWallet = method.type === 'digital_wallet';
                                   const isGCash = isDigitalWallet && method.provider_payment_method_id?.startsWith('09');
-                                  
+
                                   return (
                                     <div
                                       key={method.id}
-                                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                        formState.selectedPaymentMethod?.id === method.id
+                                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${formState.selectedPaymentMethod?.id === method.id
                                           ? 'border-blue-500 bg-blue-50'
                                           : 'border-gray-200 hover:border-gray-300'
-                                      }`}
+                                        }`}
                                       onClick={() => handlePaymentMethodSelect(method)}
                                     >
                                       <div className="flex items-center space-x-3">
@@ -442,13 +441,13 @@ const DonateOrganization = () => {
                                         )}
                                         <div>
                                           <p className="font-medium">
-                                            {isGCash 
-                                              ? 'GCASH' 
+                                            {isGCash
+                                              ? 'GCASH'
                                               : method.card_brand?.toUpperCase() || 'CARD'
                                             }
                                           </p>
                                           <p className="text-sm text-gray-600">
-                                            {isDigitalWallet 
+                                            {isDigitalWallet
                                               ? `•••• •••• ${method.bank_account_last4 || '0000'}`
                                               : `**** **** **** ${method.card_last4 || '0000'}`
                                             }

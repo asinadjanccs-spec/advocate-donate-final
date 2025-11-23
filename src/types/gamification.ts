@@ -13,6 +13,22 @@ export interface GamificationTier {
   updated_at: string;
 }
 
+export interface UserAchievement {
+  id: string;
+  user_id: string;
+  current_tier: TierName;
+  total_donation_amount: number;
+  total_donations_count: number;
+  organizations_supported_count: number;
+  tier_minimum_amount: number;
+  tier_upgrade_history: TierUpgrade[] | null;
+  privacy_settings: AchievementPrivacySettings;
+  first_donation_date: string | null;
+  last_tier_upgrade_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Tier names enum
 export type TierName = 'new_donor' | 'bronze' | 'silver' | 'gold' | 'platinum';
 
@@ -50,14 +66,14 @@ export interface UserAchievementWithTier {
   badge_color: string;
   badge_icon: string;
   tier_description: string;
-  
+
   // Next tier information (null if at highest tier)
   next_tier_name?: string;
   next_tier_minimum_amount?: number;
   next_tier_badge_color?: string;
   next_tier_badge_icon?: string;
   next_tier_description?: string;
-  
+
   // Progress calculation
   progress_percentage: number;
 
@@ -109,16 +125,16 @@ export interface GamificationServiceInterface {
   // Achievement management
   getUserAchievement(userId: string): Promise<UserAchievementWithTier | null>;
   updateUserAchievement(userId: string): Promise<UserAchievementWithTier>;
-  
+
   // Tier management
   getAllTiers(): Promise<GamificationTier[]>;
   getActiveTiers(): Promise<GamificationTier[]>;
   calculateTierForAmount(amount: number): Promise<GamificationTier>;
-  
+
   // Progress calculations
   getTierProgress(userId: string): Promise<TierProgress>;
   getAchievementStats(userId: string): Promise<AchievementStats>;
-  
+
   // Privacy settings
   updatePrivacySettings(userId: string, settings: AchievementPrivacySettings): Promise<void>;
   getPrivacySettings(userId: string): Promise<AchievementPrivacySettings>;

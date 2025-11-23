@@ -24,7 +24,7 @@ export const userService = {
     try {
       console.log('DEBUG USERSERVICE: Getting current user profile');
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         console.log('DEBUG USERSERVICE: Auth error or no user:', authError);
         return { data: null, error: 'User not authenticated' };
@@ -51,7 +51,7 @@ export const userService = {
         .from('organizations')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       console.log('DEBUG USERSERVICE: Organization query result:', { organization, orgError });
 
@@ -66,9 +66,9 @@ export const userService = {
       return { data: profileWithOrg, error: null };
     } catch (error) {
       console.error('DEBUG USERSERVICE: Unexpected error:', error);
-      return { 
-        data: null, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   },
@@ -93,9 +93,9 @@ export const userService = {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   },
@@ -109,7 +109,7 @@ export const userService = {
   }> {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         return { data: null, error: 'User not authenticated' };
       }
@@ -127,9 +127,9 @@ export const userService = {
 
       return { data, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   },
@@ -144,37 +144,37 @@ export const userService = {
   }> {
     try {
       const { data: profile, error } = await this.getCurrentUserProfile();
-      
+
       if (error || !profile) {
         return { isComplete: false, missingFields: [], error: error || 'Profile not found' };
       }
 
       const missingFields: string[] = [];
-      
+
       // Required fields for all users
       if (!profile.full_name?.trim()) missingFields.push('full_name');
-      
+
       // Additional requirements for nonprofit users
       if (profile.user_type === 'nonprofit') {
         if (!profile.organization_name?.trim()) missingFields.push('organization_name');
         if (!profile.registration_number?.trim()) missingFields.push('registration_number');
-        
+
         // Check if organization record exists
         if (!profile.organization) {
           missingFields.push('organization_setup');
         }
       }
 
-      return { 
-        isComplete: missingFields.length === 0, 
-        missingFields, 
-        error: null 
+      return {
+        isComplete: missingFields.length === 0,
+        missingFields,
+        error: null
       };
     } catch (error) {
-      return { 
-        isComplete: false, 
-        missingFields: [], 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        isComplete: false,
+        missingFields: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   },
@@ -188,14 +188,14 @@ export const userService = {
   }> {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
+
       if (authError || !user) {
         return { data: null, error: 'User not authenticated' };
       }
 
       // Get user profile
       const { data: profile, error: profileError } = await this.getCurrentUserProfile();
-      
+
       if (profileError || !profile) {
         return { data: null, error: profileError || 'Profile not found' };
       }
@@ -213,7 +213,7 @@ export const userService = {
       const metadata = user.user_metadata || {};
       const organizationName = profile.organization_name || metadata.organization_name;
       const registrationNumber = profile.registration_number || metadata.registration_number;
-      
+
       if (!organizationName || !registrationNumber) {
         return { data: null, error: 'Missing required organization data' };
       }
@@ -221,7 +221,7 @@ export const userService = {
       // Generate slug
       const slug = organizationService.generateSlug(organizationName);
       const { available, error: slugError } = await organizationService.isSlugAvailable(slug);
-      
+
       if (slugError) {
         return { data: null, error: 'Failed to validate organization name' };
       }
@@ -254,16 +254,16 @@ export const userService = {
       };
 
       const { data: organization, error: createError } = await organizationService.createOrganization(organizationData);
-      
+
       if (createError || !organization) {
         return { data: null, error: createError || 'Failed to create organization' };
       }
 
       return { data: organization, error: null };
     } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }

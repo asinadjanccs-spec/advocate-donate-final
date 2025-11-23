@@ -1,4 +1,4 @@
-import { paymentService, DonationData, PaymentResult, MockPaymentMethod } from './payment';
+import { paymentService, DonationData, PaymentResult, PaymentMethod } from './payment';
 import { paymentMethodService, type PaymentMethodDB } from './paymentMethodService';
 import { isAuthenticated, validateAndRefreshSession } from './auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -90,7 +90,7 @@ class DonationService {
    */
   async initializeFormStateWithAuth(context?: DonationContext): Promise<DonationFormState> {
     const baseState = this.initializeFormState(context);
-    
+
     try {
       // Check if user is authenticated
       const isAuth = await isAuthenticated();
@@ -105,7 +105,7 @@ class DonationService {
       }
 
       const user = session.user;
-      
+
       // Populate form with authenticated user data
       return {
         ...baseState,
@@ -175,7 +175,7 @@ class DonationService {
         // Try one more time in case of temporary network issues
         await new Promise(resolve => setTimeout(resolve, 1000));
         isAuth = await isAuthenticated();
-        
+
         if (!isAuth) {
           return {
             success: false,
@@ -196,7 +196,7 @@ class DonationService {
         } catch (refreshError) {
           console.error('Session refresh attempt failed:', refreshError);
         }
-        
+
         if (!sessionData) {
           return {
             success: false,
@@ -224,7 +224,7 @@ class DonationService {
       }
 
       const amount = formState.amount || parseFloat(formState.customAmount);
-      
+
       // Prepare donation data
       const donationData: DonationData = {
         amount,
@@ -241,12 +241,12 @@ class DonationService {
       // Create payment intent
       const paymentIntent = await paymentService.createPaymentIntent(donationData);
 
-      // Convert real payment method to mock format for payment service compatibility
-      const mockPaymentMethod: MockPaymentMethod = {
+      // Convert payment method to format for payment service compatibility
+      const paymentMethod: PaymentMethod = {
         id: formState.selectedPaymentMethod!.provider_payment_method_id,
         type: 'card',
         card: {
-          brand: (formState.selectedPaymentMethod!.card_brand as 'visa' | 'mastercard' | 'amex') || 'visa',
+          brand: (formState.selectedPaymentMethod!.card_brand as string) || 'visa',
           last4: formState.selectedPaymentMethod!.card_last4 || '0000',
           exp_month: formState.selectedPaymentMethod!.card_exp_month || 12,
           exp_year: formState.selectedPaymentMethod!.card_exp_year || 2025
@@ -256,7 +256,7 @@ class DonationService {
       // Process payment
       const paymentResult = await paymentService.confirmPayment(
         paymentIntent.client_secret,
-        mockPaymentMethod
+        paymentMethod
       );
 
       if (!paymentResult.success) {
@@ -289,7 +289,7 @@ class DonationService {
         try {
           // Create mock subscription
           const subscription = await paymentService.createSubscription(donationData);
-          
+
           // Save subscription to database
           const dbSubscription: TablesInsert<'subscriptions'> = {
             amount: donationData.amount,
@@ -327,11 +327,11 @@ class DonationService {
           // Get achievement before update to compare tiers
           const beforeAchievement = await gamificationService.getUserAchievement(session.user.id);
           const beforeTier = beforeAchievement?.current_tier;
-          
+
           // Update achievements (database triggers handle the calculation)
           const afterAchievement = await gamificationService.updateUserAchievement(session.user.id);
           const afterTier = afterAchievement?.current_tier;
-          
+
           // Check if tier upgraded
           if (beforeTier && afterTier && beforeTier !== afterTier) {
             const newTier = await gamificationService.getTierByName(afterTier);
@@ -380,7 +380,7 @@ class DonationService {
   }> {
     try {
       const { data, error } = await paymentMethodService.getUserPaymentMethods();
-      
+
       if (error) {
         return {
           methods: [],
@@ -450,7 +450,7 @@ class DonationService {
   } {
     const amount = formState.amount || parseFloat(formState.customAmount);
     const recipient = context?.campaignTitle || context?.organizationName || 'General Fund';
-    
+
     const summary = {
       amount,
       formattedAmount: this.formatAmount(amount),
@@ -539,7 +539,7 @@ class DonationService {
    */
   async getOrganizationReceivedDonations(
     organizationId: string,
-    limit: number = 50, 
+    limit: number = 50,
     offset: number = 0
   ): Promise<{
     donations: DonationHistory[];
@@ -610,33 +610,33 @@ class DonationService {
       // Try multiple approaches to find donations
       let allDonations: DonationHistory[] = [];
       let totalCount = 0;
-      
+
       // First, try with organization slug if it exists
       if (organizationSlug) {
         console.log('DEBUG SERVICE: Trying with organization slug:', organizationSlug);
-        
+
         const orgQuery = supabase
           .from('donations')
           .select('*', { count: 'exact' })
           .eq('payment_status', 'succeeded')
           .eq('target_type', 'organization')
-          .eq('target_id', organizationSlug)
+          .eq('target_id', organizationId)
           .order('created_at', { ascending: false })
           .range(offset, offset + limit - 1);
-          
+
         const { data: orgDonations, count: orgCount } = await orgQuery;
         console.log('DEBUG SERVICE: Org donations result:', { orgDonations, orgCount });
-        
+
         if (orgDonations) {
           allDonations = [...allDonations, ...orgDonations];
           totalCount += orgCount || 0;
         }
       }
-      
+
       // Then try with campaign IDs
       if (campaignIds.length > 0) {
         console.log('DEBUG SERVICE: Trying with campaign IDs:', campaignIds);
-        
+
         const campaignQuery = supabase
           .from('donations')
           .select('*', { count: 'exact' })
@@ -645,16 +645,16 @@ class DonationService {
           .in('target_id', campaignIds.map(id => id.toString()))
           .order('created_at', { ascending: false })
           .range(offset, offset + limit - 1);
-          
+
         const { data: campaignDonations, count: campaignCount } = await campaignQuery;
         console.log('DEBUG SERVICE: Campaign donations result:', { campaignDonations, campaignCount });
-        
+
         if (campaignDonations) {
           allDonations = [...allDonations, ...campaignDonations];
           totalCount += campaignCount || 0;
         }
       }
-      
+
       // If no donations found, try a broader search to see if there are ANY donations for debugging
       if (allDonations.length === 0) {
         console.log('DEBUG SERVICE: No donations found, trying broader search...');
@@ -664,7 +664,7 @@ class DonationService {
           .eq('payment_status', 'succeeded')
           .limit(10);
         console.log('DEBUG SERVICE: Sample donations in database:', sampleDonations);
-        
+
         // Also check if the organization actually exists
         const { data: orgExists } = await supabase
           .from('organizations')
@@ -778,8 +778,8 @@ class DonationService {
       console.log('DEBUG STATS: Organization slug:', organizationSlug);
 
       // Try multiple approaches to gather statistics
-      let allDonations: Array<{amount: number, target_type: string, target_id: string}> = [];
-      
+      let allDonations: Array<{ amount: number, target_type: string, target_id: string }> = [];
+
       // First, get organization donations
       if (organizationSlug) {
         console.log('DEBUG STATS: Querying organization donations for slug:', organizationSlug);
@@ -788,14 +788,14 @@ class DonationService {
           .select('amount, target_type, target_id')
           .eq('payment_status', 'succeeded')
           .eq('target_type', 'organization')
-          .eq('target_id', organizationSlug);
-        
+          .eq('target_id', organizationId);
+
         console.log('DEBUG STATS: Organization donations found:', orgDonations?.length || 0);
         if (orgDonations) {
           allDonations = [...allDonations, ...orgDonations];
         }
       }
-      
+
       // Then get campaign donations
       if (campaignIds.length > 0) {
         console.log('DEBUG STATS: Querying campaign donations for IDs:', campaignIds);
@@ -805,7 +805,7 @@ class DonationService {
           .eq('payment_status', 'succeeded')
           .eq('target_type', 'campaign')
           .in('target_id', campaignIds.map(id => id.toString()));
-        
+
         console.log('DEBUG STATS: Campaign donations found:', campaignDonations?.length || 0);
         if (campaignDonations) {
           allDonations = [...allDonations, ...campaignDonations];
