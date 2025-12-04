@@ -60,19 +60,19 @@ const DonateCampaign = () => {
 
   const fetchCampaign = useCallback(async () => {
     if (!id) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     const { data, error: fetchError } = await campaignService.getCampaignBySlug(id);
-    
+
     if (fetchError) {
       setError(fetchError);
       setCampaign(null);
     } else {
       setCampaign(data);
     }
-    
+
     setLoading(false);
   }, [id]);
 
@@ -123,16 +123,16 @@ const DonateCampaign = () => {
 
   const handleSubmitDonation = async () => {
     setFormState(prev => ({ ...prev, isProcessing: true }));
-    
+
     try {
       const context: DonationContext = {
         campaignId: campaign.id,
         campaignTitle: campaign.title,
         organizationName: campaign.organization?.name || 'Unknown Organization'
       };
-      
+
       const result = await donationService.processDonation(formState, context);
-      
+
       if (result.success) {
         setDonationResult({
           success: true,
@@ -283,36 +283,36 @@ const DonateCampaign = () => {
                       </Button>
                     </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold text-center mb-4">Choose Amount</h3>
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    {suggestedAmounts.map((amount) => (
-                      <Button
-                        key={amount}
-                        variant={selectedAmount === amount.toString() ? "default" : "outline"}
-                        onClick={() => setSelectedAmount(amount.toString())}
-                        className="h-12"
-                      >
-                        ₱{amount}
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₱</span>
-                    <Input
-                      placeholder="Custom amount"
-                      value={selectedAmount}
-                      onChange={(e) => setSelectedAmount(e.target.value)}
-                      className="pl-8"
-                      type="number"
-                      min={1}
-                    />
-                  </div>
-                </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-center mb-4">Choose Amount</h3>
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        {suggestedAmounts.map((amount) => (
+                          <Button
+                            key={amount}
+                            variant={selectedAmount === amount.toString() ? "default" : "outline"}
+                            onClick={() => setSelectedAmount(amount.toString())}
+                            className="h-12"
+                          >
+                            ₱{amount}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₱</span>
+                        <Input
+                          placeholder="Custom amount"
+                          value={selectedAmount}
+                          onChange={(e) => setSelectedAmount(e.target.value)}
+                          className="pl-8"
+                          type="number"
+                          min={1}
+                        />
+                      </div>
+                    </div>
 
-                    <Button 
-                      className="w-full" 
-                      size="lg" 
+                    <Button
+                      className="w-full"
+                      size="lg"
                       disabled={!selectedAmount}
                       onClick={handleDonate}
                     >
@@ -323,9 +323,9 @@ const DonateCampaign = () => {
                 )}
 
                 {selectedDonationType === 'physical' && (
-                  <Button 
-                    className="w-full" 
-                    size="lg" 
+                  <Button
+                    className="w-full"
+                    size="lg"
                     onClick={() => setShowPhysicalForm(true)}
                   >
                     <Heart className="w-4 h-4 mr-2" />
@@ -454,11 +454,10 @@ const DonateCampaign = () => {
                                   {availablePaymentMethods.map((method) => (
                                     <div
                                       key={method.id}
-                                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                                        formState.selectedPaymentMethod?.id === method.id
+                                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${formState.selectedPaymentMethod?.id === method.id
                                           ? 'border-blue-500 bg-blue-50'
                                           : 'border-gray-200 hover:border-gray-300'
-                                      }`}
+                                        }`}
                                       onClick={() => handlePaymentMethodSelect(method)}
                                     >
                                       <div className="flex items-center justify-between">
@@ -543,6 +542,34 @@ const DonateCampaign = () => {
                             )}
                           </div>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Physical Donation Form Modal */}
+                {showPhysicalForm && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                      <div className="p-6">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-xl font-semibold">Physical Donation to {campaign.title}</h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowPhysicalForm(false)}
+                          >
+                            ×
+                          </Button>
+                        </div>
+
+                        <PhysicalDonationForm
+                          targetType="campaign"
+                          targetId={campaign.id}
+                          targetName={campaign.title}
+                          onSuccess={handlePhysicalDonationSuccess}
+                          onCancel={() => setShowPhysicalForm(false)}
+                        />
                       </div>
                     </div>
                   </div>
