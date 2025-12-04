@@ -99,9 +99,7 @@ const Navigation = () => {
                   onClick={() => navigate('/achievements')}
                 />
 
-                <Button asChild variant="donate" size="sm">
-                  <Link to="/donate">Donate Now</Link>
-                </Button>
+
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -167,9 +165,7 @@ const Navigation = () => {
                     Sign In
                   </Link>
                 </Button>
-                <Button asChild variant="donate" size="sm">
-                  <Link to="/donate">Donate Now</Link>
-                </Button>
+
               </>
             )}
           </div>
@@ -257,11 +253,7 @@ const Navigation = () => {
                       Create Campaign
                     </Link>
                   </Button>
-                  <Button asChild variant="donate" size="sm">
-                    <Link to="/donate" onClick={() => setIsMenuOpen(false)}>
-                      Donate Now
-                    </Link>
-                  </Button>
+
                   <Button
                     variant="destructive"
                     size="sm"
@@ -283,11 +275,7 @@ const Navigation = () => {
                       Sign In
                     </Link>
                   </Button>
-                  <Button asChild variant="donate" size="sm">
-                    <Link to="/donate" onClick={() => setIsMenuOpen(false)}>
-                      Donate Now
-                    </Link>
-                  </Button>
+
                 </>
               )}
             </div>
